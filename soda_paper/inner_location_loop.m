@@ -6,15 +6,18 @@
 */
 function [sigma,tau]=get_sigma_and_tau(n)
 	tau=randi([0,n-2],1,1)
-	sigma=randi([0,n/2-1],1,1)
+	sigma=2*randi([0,n/2-1],1,1)+1
 end
 
 /*
  Step 2 involves permuting and multiplying the signal with the window function
 
+%INCOMPLETE PART
  Step 2 Part 1
  Creating a flat-window function of length n (the length of input signal)
 */
+
+%INCOMPLETE PART
 
 % Step 2 part 2
 % Multiplying the window function with the permuted signal
@@ -69,7 +72,9 @@ function o_sigma=offset_function(h_sigma,n,sigma,B):
 	o_sigma=sigma*(0:n-1)-(n/B)*h_sigma
 end
 
-function I=finding_J(Z,n)
+
+% Step 5: The set which is the output in location loop
+function I=finding_I(Z,n,h_sigma)
 	max_element=max(Z)
 	J=[]
 	for i=0:length(Z)-1
@@ -78,8 +83,24 @@ function I=finding_J(Z,n)
 		end
 	end
 
-%Incomplete function
+	J=sort(J)
+	I=[]
 
+	for i=0:n-1
+		[index]=binarySearch(J,length(J),h_sigma[i])
+		if index!=-1
+			append(I,i)
+		end
+	end
+end
 
+%Step 6 : The estimates in estimation loop
+
+function X_estim=find_estimates(x,h_sigma,o_sigma,omega,tau,G,I,Z)
+	X_estim=[]
+	for j=0:length(I)-1
+		i=I[j]
+		append(X_estim,((Z[h_sigma[i]])*pow(omega,tau*i))/G[o_sigma[i]])
+	end
 
 end
