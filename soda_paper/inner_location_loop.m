@@ -16,8 +16,15 @@ end
  Step 2 Part 1
  Creating a flat-window function of length n (the length of input signal)
 */
+function [omega,B,g]=get_window_function(n)
+
+
 
 %INCOMPLETE PART
+
+
+
+end
 
 % Step 2 part 2
 % Multiplying the window function with the permuted signal
@@ -26,15 +33,6 @@ function g=permute(x,sigma,tau)
 	% Assumption: The signal is periodic with period n
 	n=length(x)
 	g=x[(sigma*i+tau)%n]
-end
-
-
-
-
-function  y=multiplication_with_window_function(x,g)
-	% x is the signal 
-	% g is the window function
-	y=x.*g
 end
 
 /*
@@ -49,7 +47,7 @@ function z=generate_z(y,w,B)
 	% B is the bucket size
 	z=zeros(1,n)
 	l=0:(w/B)-1
-	for i=0:B 
+	for i=0:B-1 
 		%check this line for dimesion errors
 		tmp=i+B*(l)
 		z[i] = sum(y[temp])
@@ -102,5 +100,24 @@ function X_estim=find_estimates(x,h_sigma,o_sigma,omega,tau,G,I,Z)
 		i=I[j]
 		append(X_estim,((Z[h_sigma[i]])*pow(omega,tau*i))/G[o_sigma[i]])
 	end
+
+end
+
+
+function [I,sigma]=inner_location_loop(x,n)
+
+[sigma,tau]=get_sigma_and_tau(n)
+
+[omega,B,g]=get_window_function(n)
+x_permuted=permute(x,sigma,tau)
+y=x.*g
+
+z=generate_z(y,w,B)
+Z=compute_dft(z)
+
+h_sigma=hash_function(n,sigma,B)
+o_sigma=offset_function(h_sigma,n,sigma,B):
+
+I=finding_I(Z,n,h_sigma)
 
 end
