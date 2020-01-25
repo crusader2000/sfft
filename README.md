@@ -7,4 +7,4 @@ Completed 95% of code.
 
 TO DO:
 Writing the window function
-Checking and testing the code
+Testing the code
