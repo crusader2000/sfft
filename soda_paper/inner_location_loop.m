@@ -16,14 +16,13 @@ end
  Step 2 Part 1
  Creating a flat-window function of length n (the length of input signal)
 */
-function [omega,B,g]=get_window_function(n)
-
-
-
-%INCOMPLETE PART
-
-
-
+function [B,g]=get_window_function(n)
+	factors_n=factor(n)
+	B=factors_n(randi([0,n/2-1],1,1))
+	g = chebwin(n)
+	// BOX CAR FUNCTION
+	box=rectangularPulse(0,50)
+	g=cconv(box,g)
 end
 
 % Step 2 part 2
@@ -100,11 +99,11 @@ function X_estim=find_estimates(h_sigma,o_sigma,omega,tau,G,I,Z,n)
 end
 
 
-function [I,h_sigma,o_sigma,Z,omega,tau,G]=inner_location_loop(x,n)
+function [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n)
 
 [sigma,tau]=get_sigma_and_tau(n)
 
-[omega,B,g]=get_window_function(n)
+[B,g]=get_window_function(n)
 G=fft(g)
 
 x_permuted=permute(x,sigma,tau,n)
