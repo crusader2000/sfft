@@ -16,7 +16,7 @@ end
  Step 2 Part 1
  Creating a flat-window function of length n (the length of input signal)
 */
-function [omega,B,g]=get_window_function(n)
+function [B,g]=get_window_function(n)
 
 
 
@@ -31,7 +31,8 @@ end
 function g=permute(x,sigma,tau,n)
 	% Returns a permuted signal
 	% Assumption: The signal is periodic with period n
-	g=x[(sigma*i+tau)%n]
+  i=0:n-1;
+	g=x[(sigma*i+tau)%n];
 end
 
 /*
@@ -44,44 +45,44 @@ end
 function z=generate_z(y,w,B)
 	% w is a parameter related to the window function
 	% B is the bucket size
-	z=zeros(1,B)
-	l=0:(w/B)-1
+	z=zeros(1,B);
+	l=0:(w/B)-1;
 	for i=1:B
 		%check this line for dimesion errors
-		tmp=i+B*(l)
-		z[i] = sum(y[temp])
+		tmp=i+B*(l);
+		z[i] = sum(y[temp]);
 	end
 end
 
 % Step 4: Making the hash function and offset function
 
 function h_sigma=hash_function(n,sigma,B)
-	h_sigma=round((sigma*B*(0:n-1))/n)
+	h_sigma=round((sigma*B*(0:n-1))/n);
 end
 
 function o_sigma=offset_function(h_sigma,n,sigma,B):
 	% h is the list returned by the hash function
-	o_sigma=sigma*(0:n-1)-(n/B)*h_sigma
+	o_sigma=sigma*(0:n-1)-(n/B)*h_sigma;
 end
 
 
 % Step 5: The set which is the output in location loop
 function I=finding_I(Z,n,h_sigma)
-	max_element=max(Z)
-	J=[]
+	max_element=max(Z);
+	J=[];
 	for i=0:length(Z)-1
 		if Z[i]==max_element
-			append(J,i)
+			append(J,i);
 		end
 	end
 
-	J=sort(J)
-	I=[]
+	J=sort(J);
+	I=[];
 
 	for i=1:n
-		[index]=binarySearch(J,length(J),h_sigma[i])
+		[index]=binarySearch(J,length(J),h_sigma[i]);
 		if index!=-1
-			append(I,i-1)
+			append(I,i-1);
 		end
 	end
 end
@@ -89,33 +90,33 @@ end
 
 %Step 6 : The estimates in estimation loop
 
-function X_estim=find_estimates(h_sigma,o_sigma,omega,tau,G,I,Z,n)
-	X_estim=zeros(1,n)
+function X_estim=find_estimates(h_sigma,o_sigma,tau,G,I,Z,n)
+	X_estim=zeros(1,n);
 
 	for j=1:length(I)
-		i=I[j]+1
-		X_estim[i]=((Z[h_sigma[i]])*pow(omega,tau*(i-1)))/G[o_sigma[i]]
+		i=I[j]+1;
+		X_estim[i]=(Z[h_sigma[i]]*exp((1i*2*pi*tau*(i-1))/n))/G[o_sigma[i]];
 	end
 
 end
 
 
-function [I,h_sigma,o_sigma,Z,omega,tau,G]=inner_location_loop(x,n)
+function [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n)
 
-[sigma,tau]=get_sigma_and_tau(n)
+[sigma,tau]=get_sigma_and_tau(n);
 
-[omega,B,g]=get_window_function(n)
-G=fft(g)
+[B,g]=get_window_function(n);
+G=fft(g);
 
-x_permuted=permute(x,sigma,tau,n)
-y=x_permuted.*g
+x_permuted=permute(x,sigma,tau,n);
+y=x_permuted.*g;
 
-z=generate_z(y,w,B)
-Z=fft(z)
+z=generate_z(y,w,B);
+Z=fft(z);
 
-h_sigma=hash_function(n,sigma,B)
-o_sigma=offset_function(h_sigma,n,sigma,B):
+h_sigma=hash_function(n,sigma,B);
+o_sigma=offset_function(h_sigma,n,sigma,B);
 
-I=finding_I(Z,n,h_sigma)
+I=finding_I(Z,n,h_sigma);
 
 end
