@@ -16,23 +16,17 @@ end
  Step 2 Part 1
  Creating a flat-window function of length n (the length of input signal)
 */
-function [B,g]=get_window_function(n)
-<<<<<<< HEAD
-	factors_n=factor(n)
-	B=factors_n(randi([0,n/2-1],1,1))
-	g = chebwin(n)
-	// BOX CAR FUNCTION
-	box=rectangularPulse(0,50)
-	g=cconv(box,g)
-=======
-
-
-
-%INCOMPLETE PART
-
-
-
->>>>>>> 83a0a44d0beefaf4192c89a4beaf18768acf0a4d
+function g=get_window_function(n,epsilon_dash)
+	g = chebwin(n);
+	% BOX CAR FUNCTION
+	box=rectangularPulse(-epsilon_dash*n,epsilon_dash*n,-n/2:n/2);
+	%plot(-n/2:n/2,box)
+	% Check the length of this
+	if length(box)==length(g)
+		g=cconv(box,g);
+	else 
+		display("length of box car function is not equal to length of the window function");
+	end
 end
 
 % Step 2 part 2
@@ -58,6 +52,7 @@ function z=generate_z(y,w,B)
 	l=0:(w/B)-1;
 	for i=1:B
 		%check this line for dimesion errors
+		%putting a mod might help
 		tmp=i+B*(l);
 		z[i] = sum(y[temp]);
 	end
@@ -110,17 +105,19 @@ function X_estim=find_estimates(h_sigma,o_sigma,tau,G,I,Z,n)
 end
 
 
-function [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n)
+function [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n,k)
 
-[sigma,tau]=get_sigma_and_tau(n);
+[sigma,tau]=get_sigma_and_tau(n,k);
 
-<<<<<<< HEAD
-[B,g]=get_window_function(n)
+%Make sure that B is able to divide n
+B=sqrt(n*k);
+
+epsilon = 1/B;
+
+epsilon_dash = epsilon/2;
+
+g=get_window_function(n,B,epsilon_dash)
 G=fft(g)
-=======
-[B,g]=get_window_function(n);
-G=fft(g);
->>>>>>> 83a0a44d0beefaf4192c89a4beaf18768acf0a4d
 
 x_permuted=permute(x,sigma,tau,n);
 y=x_permuted.*g;
