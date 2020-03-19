@@ -17,3 +17,7 @@ The final step is to use this command to generate the fourier transform of x (th
 ```
 X=outer_loop(x,n,k);
 ```
+
+To change the input signal, change the variable "x" and correspondingly "k" in test_bench.m
+
+To change parameters like "B","d",etc. go to inner_location_loop.m
