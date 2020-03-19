@@ -5,9 +5,11 @@ function [I,h_sigma,o_sigma,Z,tau,G] = inner_location_loop(x,n,k)
     
     %Make sure that B is able to divide n
     B=sqrt(n*k);
-    
+    if mod(n,B) ~= 0
+        B=B-mod(n,B);
+    end
+        
     epsilon = 1/B;
-    
     epsilon_dash = epsilon/2;
     
     g=get_window_function(n,epsilon_dash);
@@ -15,27 +17,31 @@ function [I,h_sigma,o_sigma,Z,tau,G] = inner_location_loop(x,n,k)
     
     x_permuted=permute(x,sigma,tau,n);
     y=x_permuted.*g;
-    plot(1:n,y,'x',1:n,x,'o');
-    legend('y','x');
+%     plot(1:n,y,1:n,x,'o');
+%     legend('y','x');
     % w = O(B log( n/delta)).
     % delta= 1/n^c. choose c so that n is negligibly small.
     w=B*(n+20);
-    z=generate_z(y,w,B);
+    z=generate_z(y,w,B,n);
     Z=fft(z);
-    
+
     h_sigma=hash_function(n,sigma,B);
     o_sigma=offset_function(h_sigma,n,sigma,B);
+%     disp("h_sigma");
+%     disp(h_sigma);
+%     disp("o_sigma");
+%     disp(o_sigma);
     
     %since d is in the order of 1/epsilon
     d=int64(1/epsilon);
     
-    disp(abs(Z));
-    disp(Z);
-    
+%     disp(abs(Z));
+%     disp(length(Z));
+%     disp(d*k*n/B)    
     % Problem conjugate numbers hav the same magnitude. This will
     % interfere with elements in J and finding them 
-   
-%     I=finding_I(Z,n,d,k,h_sigma);
+%    I=zeros(1,d*k);
+    I=finding_I(Z,n,d,k,h_sigma);
 end
 
 %  Step 1 of inner loop
@@ -63,17 +69,17 @@ function g=get_window_function(n,epsilon_dash)
     % Check the length of this
     if length(box)==length(chewin)
         g=cconv(box,chewin,n);
-        disp("Plotting the window function")
-        subplot(3,1,1);
-        plot(-n/2:n/2-1,box);
-        title('box car function')
-        subplot(3,1,2);
-        plot(-n/2:n/2-1,chewin);
-        title('dolph-chebyshev function')
-        subplot(3,1,3);
-        plot(-n/2:n/2-1,g);
-        title('standard window function')
-        figure;
+%         disp("Plotting the window function")
+%         subplot(3,1,1);
+%         plot(-n/2:n/2-1,box);
+%         title('box car function')
+%         subplot(3,1,2);
+%         plot(-n/2:n/2-1,chewin);
+%         title('dolph-chebyshev function')
+%         subplot(3,1,3);
+%         plot(-n/2:n/2-1,g);
+%         title('standard window function')
+%         figure;
     else
         disp("length of box car function is not equal to length of the chebwin window function");
     end
@@ -89,19 +95,19 @@ function x_permute=permute(x,sigma,tau,n)
     %        disp(temp);
     %     disp(length(temp));
     %     disp(length(x))
-    x_permute=[];
+    x_permute=zeros(1,n);
     for k = 1:n
-        x_permute = [ x_permute ; (x(temp(k)+1))];
+        x_permute(k) = x(temp(k)+1);
         %display(k+" "+length(x_permute))
         %display(mod(temp(k),n))
     end
-    disp("Plotting the permuted signal");
-    stem(1:n,x);
-    hold on;
-    stem(1:n,x_permute);
-    legend('x','x_permute');
-    hold off;
-    figure;
+%     disp("Plotting the permuted signal");
+%     stem(1:n,x);
+%     hold on;
+%     stem(1:n,x_permute);
+%     legend('x','x_permute');
+%     hold off;
+%     figure;
 end
 
 
@@ -110,20 +116,21 @@ end
 %  Generating z
 %  Finding the dft of z
 
-function z=generate_z(y,w,B)
+function z=generate_z(y,w,B,n)
     % w is a parameter related to the window function
     % B is the bucket size
     z=zeros(1,B);
-    l=0:(w/B)-1;
-    for i=1:B
+    l=B*(0:(w/B)-1);
+%     disp(l);
+    for i=0:B-1
         %check this line for dimesion errors
         %putting a mod might help
-        temp=i+B*(l);
-        z(i)=sum(y(temp));
+        temp=i+l;
+        z(i+1)=sum(y(mod(temp,n)+1));
     end
-    stem(1:B,z);
-    title('z in time domain');
-    figure;
+%     stem(1:B,z);
+%     title('z in time domain');
+%     figure;
 end
 
 % Step 4: Making the hash function and offset function
@@ -144,13 +151,17 @@ end
 function I=finding_I(Z,n,d,k,h_sigma)
     J=[];
     sorted_Z=sort(abs(Z));
-    no_elements=sqrt(d*k);
-    for i=1:length(Z)
-        if Z(i)==max_element(Z)
-            J=[J;i-1];
-        end
-    end
     
+    
+%     no_elements=int64(d*k);
+     no_elements=4;    
+%     uncomment the above line once d and k are properly assigned
+
+
+    % Taking only the sqrt(dk) terms into consideration
+    [sort_Z,indices]=sort(Z);
+    J=indices(1:no_elements);
+%     Z(J)
     J=sort(J);
     I=[];
     
