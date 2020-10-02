@@ -181,7 +181,7 @@ function I=finding_I(Z,n,d,k,h_sigma,B)
 
     J=indices(1:no_elements)-1;
 
-    disp(J);
+    % disp(J);
     I=[];
     
     mask = zeros(1,n);

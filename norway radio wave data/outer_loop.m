@@ -1,9 +1,23 @@
 function X=outer_loop(x,n,k,g,d,B,delta)
     %since L is in the order of log(n)
     L=int64(log2(n));
-    
+    disp("L");
+    disp(L);
     [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau,set_G]=get_the_sets(x,L,n,k,g,d,B,delta);
-    close all;
+    % close all;
+    % disp(set_G);
+    % disp(size(set_G));
+    % disp(size(set_h_sigma));
+    % disp(size(set_I));
+    % disp(size(set_o_sigma));
+    % disp(size(set_Z));
+    % disp(size(set_tau));
+    % disp(size(set_G(1,:)));
+    % disp(size(set_h_sigma(1,:)));
+    % disp(size(set_I(1,:)));
+    % disp(size(set_o_sigma(1,:)));
+    % disp(size(set_Z(1,:)));
+    % disp(size(set_tau(1,:)));
     [s,union_of_all_sets]=get_s(set_I,L);
     % disp(s);
     I_dash=get_I_dash(union_of_all_sets,s,L);
@@ -31,12 +45,14 @@ function [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau,set_G]=get_the_sets(x,L,n,
     set_G=[];
     for i=1:L
         [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n,k,g,d,B,delta);
-        set_I{i}=I;
+        set_I=[set_I ;I];
         set_h_sigma=[set_h_sigma;h_sigma];
         set_o_sigma=[set_o_sigma;o_sigma];
         set_Z=[set_Z;Z];
         set_tau=[set_tau;tau];
-        set_G=[set_G;G];
+        set_G=[set_G; G];
+        % disp("size(set_G)");
+        % disp(size(set_G));
     end
     disp("Exiting the get_the_sets function");
 %     disp(set_h_sigma(1,:));
@@ -50,14 +66,14 @@ function [s,union_of_all_sets]=get_s(I,L)
     union_of_all_sets=[];
     for i=1:L
 %         disp(I{i})
-        union_of_all_sets=union(union_of_all_sets,I{i});
+        union_of_all_sets=union(union_of_all_sets,I(i,:));
     end
     disp("Found the union of all sets");
     
     % Need to include zero too
     s=zeros(max(union_of_all_sets)+1,1);
     for r=1:L
-        I_r=I{r};
+        I_r=I(r,:);
         num_elements=length(I_r);
         for idx=1:num_elements
                 s(I_r(idx)+1)=s(I_r(idx)+1)+1;
@@ -109,9 +125,18 @@ end
 function X_estim=find_estimates(h_sigma,o_sigma,tau,G,I,Z,n)
     X_estim=zeros(1,n);
 %     disp("in find_sdtimates")
-%     length(I)
+    % length(I)
+    % disp(G);
     for idx=1:length(I)
         k=I(idx)+1;
+        % disp("Z(h_sigma(k)+1)");
+        % disp(Z(h_sigma(k)+1))
+        % disp("o_sigma(k)+1");
+        % disp(o_sigma(k)+1);
+        
+        % disp("G(o_sigma(k)+1)");
+        % disp(G(o_sigma(k)+1));
+
 
         X_estim(k)=(Z(h_sigma(k)+1)*exp((1i*2*pi*tau*(k-1))/n))/G(o_sigma(k)+1);
 %         disp(X_estim(k))

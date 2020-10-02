@@ -96,18 +96,46 @@ for  n=1:Dx:Dx
     k = 2;% or change to 3
     n = 256;
     
+    
+    % Window array shape must be 1x256
+    % Dolph Chebyshev Window convolved with box car
     H = sigwin.chebwin(256,200);
     win = generate(H);
     WIN = fftshift(fft(win));
     box_car = fftshift(fft(ones(round(2*epsilon_dash*n),1),256));
     abs_win = abs(WIN);
-    final_win = fftshift(box_car .* (abs(WIN)/max(abs_win)));
+    final_win = box_car .* (abs(WIN)/max(abs_win));
+    final_win = fftshift(final_win);
     g= transpose(ifft(final_win,256));
-%     plot(0:255,log(final_win));
-%    figure;
+    
+    % Hanning Window
+    % g= transpose(hanning(256));
+    
+    % Bartlett Window
+    % g= transpose(bartlett(256));
 
-%     plot(0:255,log(g));
-%    figure;
+    % Blackman Window
+    % g= transpose(blackman(256));
+
+    % Hamming Window
+    % g= transpose(hamming(256));
+
+    % Taylor Window
+    % g= transpose(taylorwin(256));
+
+    % Kaiser Window
+    % g= transpose(kaiser(256,2.5));
+
+    % disp(size(g));
+    
+    
+    plot(0:255,20*log10(abs(fft(g))));
+    title('FFT of window');
+    ylabel('FFT [dB]');
+    figure;
+
+    % plot(0:255,log(g));
+    % figure;
         
     for c = 0.25:0.01:0.5
         B = round((c*k)/epsilon);
@@ -123,8 +151,65 @@ for  n=1:Dx:Dx
 
     % [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n,k,g,d,B,delta);
     
-    X=outer_loop(x,n,k,g,d,B,delta);
+    sfft_real = fftshift(outer_loop(R1,n,k,g,d,B,delta));
+    sfft_imag = fftshift(outer_loop(I1,n,k,g,d,B,delta));
+    sfft = fftshift(outer_loop(R1+1i*I1,n,k,g,d,B,delta));
+
+    dB_cmplx = 20*log10(abs(sfft));  
+    dB_real = 20*log10(abs(sfft_real));
+    dB_imag = 20*log10(abs(sfft_imag));
+    dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+
+      
+    subplot(2,2,1)
+    hold all;
+    plot( distance,R1,'b','linewidth',1);
+    plot( distance,I1,'r','linewidth',1);
+    title('IQ time domain signal','FontSize',20);
+    axis([-25 25 -500 500]);
+    xlabel('Samples','FontSize',18);
+    ylabel('ADC value','FontSize',18);
+    grid on ;
+    set(gca,'FontSize',18,'FontWeight','bold');
+
+
+  subplot(2,2,2);  
+   grid on ;
+   hold all;
+   stem(distance,dBFS_real,'b','linewidth',2);
+   axis([-25 25 -140 0]);
+   title('SFFT Amplitude(per chirp-real only)','FontSize',20);
+   xlabel('Distance[m]','FontSize',18);
+   ylabel('FFT output [dBFS]','FontSize',18);
+   set(gca,'FontSize',18,'FontWeight','bold');
+
    
+  subplot(2,2,3);
+    grid on ;
+    hold all;
+    stem(distance,dBFS_imag,'g','linewidth',2);
+    axis([-25 25 -140 0]);
+    title('SFFT Amplitude(per chirp-imag only)','FontSize',20);
+    xlabel('Distance[m]','FontSize',18);
+    ylabel('FFT output [dBFS]','FontSize',18);
+    set(gca,'FontSize',18,'FontWeight','bold');
+
+   subplot(2,2,4);
+    grid on ;
+    hold all;
+    stem(distance,dBFS_cmplx,'r','linewidth',1);
+    axis([-25 25 -140 0]);
+    title('SFFT Amplitude(per chirp)','FontSize',20);
+    xlabel('Distance[m]','FontSize',18);
+    ylabel('FFT output [dBFS]','FontSize',18);
+    set(gca,'FontSize',18,'FontWeight','bold');
+   
+    drawnow;
+   
+figure;
+
    dB_cmplx = 20*log10(abs(ABS11));  
    dB_real = 20*log10(abs(R11));
    dB_imag = 20*log10(abs(I11));
@@ -133,66 +218,65 @@ for  n=1:Dx:Dx
    dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
  
       
-%   subplot(2,2,1)
-%      hold all;
-%      plot( distance,R1,'b','linewidth',1);
-%      plot( distance,I1,'r','linewidth',1);
-%      title('IQ time domain signal','FontSize',20);
-%      axis([-25 25 -500 500]);
-%      xlabel('Samples','FontSize',18);
-%      ylabel('ADC value','FontSize',18);
-%      grid on ;
-%      set(gca,'FontSize',18,'FontWeight','bold');
+  subplot(2,2,1)
+     hold all;
+     plot( distance,R1,'b','linewidth',1);
+     plot( distance,I1,'r','linewidth',1);
+     title('IQ time domain signal','FontSize',20);
+     axis([-25 25 -500 500]);
+     xlabel('Samples','FontSize',18);
+     ylabel('ADC value','FontSize',18);
+     grid on ;
+     set(gca,'FontSize',18,'FontWeight','bold');
   
-% %  subplot(2,3,2)
-%  %     plot( R1,'b','linewidth',2);
-%  %     title('IQ time domain signal for real data','FontSize',20);
-%  %     xlabel('time(*0.1 us)','FontSize',18);
-%  %     ylabel('adc value','FontSize',18);
-%  %    axis([-25 25 -500 500]);
-%  %      grid on ;
+%  subplot(2,3,2)
+ %     plot( R1,'b','linewidth',2);
+ %     title('IQ time domain signal for real data','FontSize',20);
+ %     xlabel('time(*0.1 us)','FontSize',18);
+ %     ylabel('adc value','FontSize',18);
+ %    axis([-25 25 -500 500]);
+ %      grid on ;
  
-%  %   subplot(2,3,3)
-%  %    plot( I1,'r','linewidth',2); 
-%  %    title('IQ time domain signal for imaginary data','FontSize',20);
-%  %    xlabel('time(*0.1 us)','FontSize',18);
-%  %    ylabel('adc value','FontSize',18);
-%  %    axis([-25 25 -500 500]);
-%  %    grid on ;
-%  %    set(gca,'FontSize',18,'FontWeight','bold')
+ %   subplot(2,3,3)
+ %    plot( I1,'r','linewidth',2); 
+ %    title('IQ time domain signal for imaginary data','FontSize',20);
+ %    xlabel('time(*0.1 us)','FontSize',18);
+ %    ylabel('adc value','FontSize',18);
+ %    axis([-25 25 -500 500]);
+ %    grid on ;
+ %    set(gca,'FontSize',18,'FontWeight','bold')
  
-%    subplot(2,2,2);  
-%     grid on ;
-%     hold all;
-%     plot(distance,dBFS_real,'b','linewidth',2);
-%     axis([-25 25 -140 0]);
-%     title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
-%     xlabel('Distance[m]','FontSize',18);
-%     ylabel('FFT output [dBFS]','FontSize',18);
-%     set(gca,'FontSize',18,'FontWeight','bold');
+   subplot(2,2,2);  
+    grid on ;
+    hold all;
+    plot(distance,dBFS_real,'b','linewidth',2);
+    axis([-25 25 -140 0]);
+    title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
+    xlabel('Distance[m]','FontSize',18);
+    ylabel('FFT output [dBFS]','FontSize',18);
+    set(gca,'FontSize',18,'FontWeight','bold');
  
     
-%    subplot(2,2,3);
-%      grid on ;
-%      hold all;
-%      plot(distance,dBFS_imag,'g','linewidth',2);
-%      axis([-25 25 -140 0]);
-%      title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
-%      xlabel('Distance[m]','FontSize',18);
-%      ylabel('FFT output [dBFS]','FontSize',18);
-%      set(gca,'FontSize',18,'FontWeight','bold');
+   subplot(2,2,3);
+     grid on ;
+     hold all;
+     plot(distance,dBFS_imag,'g','linewidth',2);
+     axis([-25 25 -140 0]);
+     title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
+     xlabel('Distance[m]','FontSize',18);
+     ylabel('FFT output [dBFS]','FontSize',18);
+     set(gca,'FontSize',18,'FontWeight','bold');
  
-%     subplot(2,2,4);
-%      grid on ;
-%      hold all;
-%      plot(distance,dBFS_cmplx,'r','linewidth',1);
-%      axis([-25 25 -140 0]);
-%      title('1D FFT Amplitude profile(per chirp)','FontSize',20);
-%      xlabel('Distance[m]','FontSize',18);
-%      ylabel('FFT output [dBFS]','FontSize',18);
-%      set(gca,'FontSize',18,'FontWeight','bold');
-%     drawnow;
-    
+    subplot(2,2,4);
+     grid on ;
+     hold all;
+     plot(distance,dBFS_cmplx,'r','linewidth',1);
+     axis([-25 25 -140 0]);
+     title('1D FFT Amplitude profile(per chirp)','FontSize',20);
+     xlabel('Distance[m]','FontSize',18);
+     ylabel('FFT output [dBFS]','FontSize',18);
+     set(gca,'FontSize',18,'FontWeight','bold');
+     drawnow;
        
  end
 % 
