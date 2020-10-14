@@ -5,7 +5,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [I,h_sigma,o_sigma,Z,tau] = inner_location_loop(x,n,k,g,d,B,delta)
-    clc;
+    % clc;
     % close all;
     [sigma,tau]=get_sigma_and_tau(n);
     

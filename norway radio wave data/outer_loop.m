@@ -1,18 +1,16 @@
-function X=outer_loop(x,n,k,g,d,B,delta)
+function X=outer_loop(x,n,k,g,d,B,delta,G)
     %since L is in the order of log(n)
-    L=int64(log2(n));
-    
-    G = fft(g,n);
-
-    [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau]=get_the_sets(x,L,n,k,g,d,B,delta);
+    L = int64(log2(n));
+   
+    [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau] = get_the_sets(x,L,n,k,g,d,B,delta);
   
-    [s,union_of_all_sets]=get_s(set_I,L);
+    [s,union_of_all_sets] = get_s(set_I,L);
   
-    I_dash=get_I_dash(union_of_all_sets,s,L);
+    I_dash = get_I_dash(union_of_all_sets,s,L);
   
-    set_of_X_r_I_dash=get_x_r_I_dash(I_dash,set_h_sigma,set_o_sigma,set_Z,set_tau,G,L,n);
+    set_of_X_r_I_dash = get_x_r_I_dash(I_dash,set_h_sigma,set_o_sigma,set_Z,set_tau,G,L,n);
   
-    X=get_the_fourier_transform(set_of_X_r_I_dash,I_dash,n);
+    X = get_the_fourier_transform(set_of_X_r_I_dash,I_dash,n);
     % plot(1:n,X);
     % figure;
     % dBFS_X = 20*log10(abs(X)) - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
@@ -85,11 +83,12 @@ end
 
 function X=get_the_fourier_transform(set_of_X_r_I_dash,I_dash,n)
     X=zeros(n,1);
-    for i=1:length(I_dash)
-        X_i_real=real(set_of_X_r_I_dash(:,i));
-        X_i_imag=imag(set_of_X_r_I_dash(:,i));
-        X(i)=median(X_i_real)+1i*median(X_i_imag);
+    for k=1:length(I_dash)
+        X_i_real=real(set_of_X_r_I_dash(:,int64(I_dash(k)+1)));
+        X_i_imag=imag(set_of_X_r_I_dash(:,int64(I_dash(k)+1)));
+        X(k)=median(X_i_real)+1i*median(X_i_imag);
     end
+
 end
 
 

@@ -81,7 +81,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  epsilon = 0.11;
  epsilon_dash = 0.06;
  delta = 2*10^-9;
- k = 2;% or change to 2 to 3
+ k = 1;% or change to 2 to 3
  n = 256;
  
  % Window array shape must be 1x256
@@ -92,9 +92,11 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     box_car = fft(ones(round(2*epsilon_dash*n),1),256);
     abs_win = abs(WIN);
     final_win = box_car .* (abs(WIN)/max(abs_win));
-    final_win = final_win;
+    % final_win = final_win;
     g= transpose(ifft(final_win,256));
-
+    g = g/max(g);
+    g(1:128) = flip(g(129:256));
+    G = fft(g,256);
     
     % Hanning Window
     % g= transpose(hanning(256));
@@ -117,54 +119,73 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     % disp(size(g));
     
     
-    plot(0:255,20*log10(abs(fft(g))));
-    title('FFT of window');
-    ylabel('FFT [dB]');
-    figure;
-
-    % plot(0:255,log(g));
+    % plot(0:255,20*log10(abs(fft(g))));
+    % title('FFT of window');
+    % ylabel('FFT [dB]');
     % figure;
-        
-    for c = 0.25:0.01:0.5
-        B = round((c*k)/epsilon);
-        if  mod(n,B) == 0 
-            break
-        end
-    end
-    
-    d = round(0.1/epsilon);
-    
-    % disp("B");
-    % disp(B);
 
- for  n=1:Dx:plotEnd 
+    % plot(0:255,abs(fft(g)));
+    % figure;
+    
+    % plot(0:255,g);
+    % figure;
+    
+    % Loop for finding the b value
+    % for c = 0.75:0.01:1
+    %     B = round((c*k)/epsilon);
+    %     if  mod(n,B) == 0 
+    %         break
+    %     end
+    % end
+    
+    B = 16; % or change it to 8
 
-% for  n=1:Dx:Dx 
+    % d = round(0.1/epsilon);
+    
+    d = 1;
+
+    disp("B");
+    disp(B);
+
+    runtime_sfft = 0;
+    runtime_inbuilt = 0;
+
+%  for  n=1:Dx:plotEnd 
+    % for  n=1:Dx2:plotEnd/3 
+
+for  n=1:Dx:Dx 
     clf;
 
     R1=real_1(n : n+Dx-1);
     I1 = imag_1(n : n+Dx-1);
+    
+    tic
     R11 = fftshift(fft(hanning(length(R1)).*R1));
     I11 = fftshift(fft(hanning(length(I1)).*I1));
     ABS11 = fftshift(fft(hanning(length(R1+1i*I1)).*(R1+1i*I1)));
   
+    runtime_inbuilt = runtime_inbuilt + toc;
+       
     x = R1 + 1i*I1;
     n = length(x);  
 
     % [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n,k,g,d,B,delta);
+    tic
+    sfft_real = fftshift(outer_loop(R1,n,k,g,d,B,delta,G));
+    sfft_imag = fftshift(outer_loop(I1,n,k,g,d,B,delta,G));
+    sfft = fftshift(outer_loop(R1+1i*I1,n,k,g,d,B,delta,G));
+    % sfft_real = sfft_real + flip(sfft_real)
+    % sfft_imag = sfft_imag + flip(sfft_imag)
+    % sfft = sfft + flip(sfft)
+    runtime_sfft = runtime_sfft + toc;
     
-    sfft_real = fftshift(outer_loop(R1,n,k,g,d,B,delta));
-    sfft_imag = fftshift(outer_loop(I1,n,k,g,d,B,delta));
-    sfft = fftshift(outer_loop(R1+1i*I1,n,k,g,d,B,delta));
-
-
     dB_cmplx = 20*log10(abs(sfft));  
     dB_real = 20*log10(abs(sfft_real));
     dB_imag = 20*log10(abs(sfft_imag));
-    dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
- 
+    dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    
     subplot(2,2,1)
     hold all;
     plot( distance,R1,'linewidth',1);
@@ -180,8 +201,9 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
   subplot(2,2,2);  
    grid on ;
    hold all;
-   stem(distance,dBFS_real,'linewidth',2);
+   stem(distance,dBFS_real_s,'linewidth',2);
    axis([-25 25 -140 200]);
+%     axis([-25 25 -140 0]);
    title('SFFT Amplitude(per chirp-real only)','FontSize',20);
    xlabel('Distance[m]','FontSize',18);
    ylabel('FFT output [dBFS]','FontSize',18);
@@ -191,8 +213,9 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
   subplot(2,2,3);
     grid on ;
     hold all;
-    stem(distance,dBFS_imag,'linewidth',2);
+    stem(distance,dBFS_imag_s,'linewidth',2);
     axis([-25 25 -140 200]);
+%     axis([-25 25 -140 0]);
     title('SFFT Amplitude(per chirp-imag only)','FontSize',20);
     xlabel('Distance[m]','FontSize',18);
     ylabel('FFT output [dBFS]','FontSize',18);
@@ -201,25 +224,25 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
    subplot(2,2,4);
     grid on ;
     hold all;
-    stem(distance,dBFS_cmplx,'linewidth',1);
+    stem(distance,dBFS_cmplx_s,'linewidth',1);
     axis([-25 25 -140 200]);
+%     axis([-25 25 -140 0]);
     title('SFFT Amplitude(per chirp)','FontSize',20);
     xlabel('Distance[m]','FontSize',18);
     ylabel('FFT output [dBFS]','FontSize',18);
     set(gca,'FontSize',18,'FontWeight','bold');
    
-    drawnow;
+    % drawnow;
    
-% figure;
+    
+    dB_cmplx = 20*log10(abs(ABS11));  
+    dB_real = 20*log10(abs(R11));
+    dB_imag = 20*log10(abs(I11));
+    dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
 
-   dB_cmplx = 20*log10(abs(ABS11));  
-   dB_real = 20*log10(abs(R11));
-   dB_imag = 20*log10(abs(I11));
-   dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-   dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-   dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
- 
-      
+% figure;
   subplot(2,2,1)
      hold all;
      plot( distance,R1,'b','linewidth',1);
@@ -251,12 +274,14 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
    subplot(2,2,2);  
     grid on ;
     hold all;
-    plot(distance,dBFS_real,'b','linewidth',2);
+    plot(distance,dBFS_real,'k','linewidth',2);
     axis([-25 25 -140 200]);
+%     axis([-25 25 -140 0]);
     title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
     xlabel('Distance[m]','FontSize',18);
     ylabel('FFT output [dBFS]','FontSize',18);
     set(gca,'FontSize',18,'FontWeight','bold');
+       legend('SFFT','Inbuilt FFT','FontSize',7)
  
     
    subplot(2,2,3);
@@ -264,25 +289,33 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
      hold all;
      plot(distance,dBFS_imag,'g','linewidth',2);
      axis([-25 25 -140 200]);
+%     axis([-25 25 -140 0]);
      title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
      xlabel('Distance[m]','FontSize',18);
      ylabel('FFT output [dBFS]','FontSize',18);
      set(gca,'FontSize',18,'FontWeight','bold');
+     legend('SFFT','Inbuilt FFT','FontSize',7)
  
     subplot(2,2,4);
      grid on ;
      hold all;
      plot(distance,dBFS_cmplx,'r','linewidth',1);
      axis([-25 25 -140 200]);
+%     axis([-25 25 -140 0]);
      title('1D FFT Amplitude profile(per chirp)','FontSize',20);
      xlabel('Distance[m]','FontSize',18);
      ylabel('FFT output [dBFS]','FontSize',18);
      set(gca,'FontSize',18,'FontWeight','bold');
      drawnow;
-    
-     pause(2);
+     legend('SFFT','Inbuilt FFT','FontSize',7)
+
+
+    %  pause(2);
  end
-% 
+fprintf("  Inbuilt Runtime = %d \n",runtime_inbuilt);
+fprintf("  Sfft Runtime = %d \n",runtime_sfft);
+
+    % 
 % % plotting for all frames (Channel 2)
 % 
 real_2 = adcData(:,2);         
