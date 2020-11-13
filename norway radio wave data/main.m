@@ -179,6 +179,19 @@ for  n=1:Dx:Dx
     % sfft = sfft + flip(sfft)
     runtime_sfft = runtime_sfft + toc;
     
+
+%%%%%%%%%% TO RUN BIGBAND uncomment the following lines %%%%%%%%%%%%%%%
+% 	R1_dash = R1(1:255)
+% 	I1_dash = I1(1:255)
+% 	x_dash = x(1:255)
+% coprimes = [3,5];
+
+% 	   sfft_real  = bigband(R1_dash,coprimes,255)
+% 	   sfft_imag  = bigband(I1_dash,coprimes,255)
+% 	   sfft  = bigband(x_dash,coprimes,255)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
     dB_cmplx = 20*log10(abs(sfft));  
     dB_real = 20*log10(abs(sfft_real));
     dB_imag = 20*log10(abs(sfft_imag));
