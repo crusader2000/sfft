@@ -81,7 +81,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  epsilon = 0.11;
  epsilon_dash = 0.06;
  delta = 2*10^-9;
- k = 1;% or change to 2 to 3
+ k = 20;
  n = 256;
  
  % Window array shape must be 1x256
@@ -92,9 +92,9 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     box_car = fft(ones(round(2*epsilon_dash*n),1),256);
     abs_win = abs(WIN);
     final_win = box_car .* (abs(WIN)/max(abs_win));
-    % final_win = final_win;
     g= transpose(ifft(final_win,256));
-    g = g/max(g);
+    g = 4.38*(g/max(g));
+    
     g(1:128) = flip(g(129:256));
     G = fft(g,256);
     
@@ -119,57 +119,70 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     % disp(size(g));
     
     
-    % plot(0:255,20*log10(abs(fft(g))));
+    % plot(0:255,20*log10(1+abs(fft(g))));
     % title('FFT of window');
     % ylabel('FFT [dB]');
     % figure;
 
     % plot(0:255,abs(fft(g)));
+    % title('FFT of window');
+    % ylabel('FFT');
     % figure;
     
     % plot(0:255,g);
+    % title('Window');
     % figure;
-    
+
+    % plot(0:255,log10(1+g));
+    % title('Window');
+    % ylabel('dB');
+    % figure;
+
+
     % Loop for finding the b value
-    % for c = 0.75:0.01:1
+    % for c = 0.2:0.01:1
     %     B = round((c*k)/epsilon);
     %     if  mod(n,B) == 0 
     %         break
     %     end
     % end
     
-    B = 16; % or change it to 8
+    B =32; % or change it to 8
 
-    % d = round(0.1/epsilon);
+    d = round(0.1/epsilon);
     
-    d = 1;
+    % d = 1;
 
     disp("B");
     disp(B);
-
+    disp("d");
+    disp(d);
     runtime_sfft = 0;
     runtime_inbuilt = 0;
 
-%  for  n=1:Dx:plotEnd 
-    % for  n=1:Dx2:plotEnd/3 
+%  for  idx=1:Dx:plotEnd 
+    % for  idx=1:Dx:plotEnd/3 
 
-for  n=1:Dx:Dx 
+for  idx=1:Dx:Dx 
     clf;
 
-    R1=real_1(n : n+Dx-1);
-    I1 = imag_1(n : n+Dx-1);
+
+    R1=real_1(idx : idx+Dx-1);
+    I1 = imag_1(idx : idx+Dx-1);
     
     tic
-    R11 = fftshift(fft(hanning(length(R1)).*R1));
-    I11 = fftshift(fft(hanning(length(I1)).*I1));
-    ABS11 = fftshift(fft(hanning(length(R1+1i*I1)).*(R1+1i*I1)));
+    R11 = fftshift(fft_recur(hanning(length(R1)).*R1));
+    I11 = fftshift(fft_recur(hanning(length(I1)).*I1));
+    ABS11 = fftshift(fft_recur(hanning(length(R1+1i*I1)).*(R1+1i*I1)));
   
     runtime_inbuilt = runtime_inbuilt + toc;
        
     x = R1 + 1i*I1;
     n = length(x);  
+    
 
-    % [I,h_sigma,o_sigma,Z,tau,G]=inner_location_loop(x,n,k,g,d,B,delta);
+    [I,h_sigma,o_sigma,Z,tau] = inner_location_loop(x,n,k,g,d,B,delta);
+    
     tic
     sfft_real = fftshift(outer_loop(R1,n,k,g,d,B,delta,G));
     sfft_imag = fftshift(outer_loop(I1,n,k,g,d,B,delta,G));
@@ -179,7 +192,6 @@ for  n=1:Dx:Dx
     % sfft = sfft + flip(sfft)
     runtime_sfft = runtime_sfft + toc;
     
-
 %%%%%%%%%% TO RUN BIGBAND uncomment the following lines %%%%%%%%%%%%%%%
 % 	R1_dash = R1(1:255)
 % 	I1_dash = I1(1:255)
@@ -191,8 +203,8 @@ for  n=1:Dx:Dx
 % 	   sfft  = bigband(x_dash,coprimes,255)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-    dB_cmplx = 20*log10(abs(sfft));  
+    
+    dB_cmplx = 20*log10(3.4*abs(sfft));  
     dB_real = 20*log10(abs(sfft_real));
     dB_imag = 20*log10(abs(sfft_imag));
     dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
@@ -204,7 +216,7 @@ for  n=1:Dx:Dx
     plot( distance,R1,'linewidth',1);
     plot( distance,I1,'linewidth',1);
     title('IQ time domain signal','FontSize',20);
-    axis([-25 25 -500 500]);
+    % axis([-25 25 -500 500]);
     xlabel('Samples','FontSize',18);
     ylabel('ADC value','FontSize',18);
     grid on ;
@@ -215,7 +227,7 @@ for  n=1:Dx:Dx
    grid on ;
    hold all;
    stem(distance,dBFS_real_s,'linewidth',2);
-   axis([-25 25 -140 200]);
+%    axis([-25 25 -140 0]);
 %     axis([-25 25 -140 0]);
    title('SFFT Amplitude(per chirp-real only)','FontSize',20);
    xlabel('Distance[m]','FontSize',18);
@@ -227,7 +239,7 @@ for  n=1:Dx:Dx
     grid on ;
     hold all;
     stem(distance,dBFS_imag_s,'linewidth',2);
-    axis([-25 25 -140 200]);
+    % axis([-25 25 -140 0]);
 %     axis([-25 25 -140 0]);
     title('SFFT Amplitude(per chirp-imag only)','FontSize',20);
     xlabel('Distance[m]','FontSize',18);
@@ -238,7 +250,7 @@ for  n=1:Dx:Dx
     grid on ;
     hold all;
     stem(distance,dBFS_cmplx_s,'linewidth',1);
-    axis([-25 25 -140 200]);
+    % axis([-25 25 -140 0]);
 %     axis([-25 25 -140 0]);
     title('SFFT Amplitude(per chirp)','FontSize',20);
     xlabel('Distance[m]','FontSize',18);
@@ -251,7 +263,7 @@ for  n=1:Dx:Dx
     dB_cmplx = 20*log10(abs(ABS11));  
     dB_real = 20*log10(abs(R11));
     dB_imag = 20*log10(abs(I11));
-    dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_real = dB_real  - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
     dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
     dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
 
@@ -267,64 +279,89 @@ for  n=1:Dx:Dx
      grid on ;
      set(gca,'FontSize',18,'FontWeight','bold');
   
-%  subplot(2,3,2)
- %     plot( R1,'b','linewidth',2);
- %     title('IQ time domain signal for real data','FontSize',20);
- %     xlabel('time(*0.1 us)','FontSize',18);
- %     ylabel('adc value','FontSize',18);
- %    axis([-25 25 -500 500]);
- %      grid on ;
- 
- %   subplot(2,3,3)
- %    plot( I1,'r','linewidth',2); 
- %    title('IQ time domain signal for imaginary data','FontSize',20);
- %    xlabel('time(*0.1 us)','FontSize',18);
- %    ylabel('adc value','FontSize',18);
- %    axis([-25 25 -500 500]);
- %    grid on ;
- %    set(gca,'FontSize',18,'FontWeight','bold')
- 
    subplot(2,2,2);  
     grid on ;
     hold all;
     plot(distance,dBFS_real,'k','linewidth',2);
-    axis([-25 25 -140 200]);
+    % axis([-25 25 -140 0]);
 %     axis([-25 25 -140 0]);
     title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
     xlabel('Distance[m]','FontSize',18);
     ylabel('FFT output [dBFS]','FontSize',18);
     set(gca,'FontSize',18,'FontWeight','bold');
-       legend('SFFT','Inbuilt FFT','FontSize',7)
+       legend('SFFT','Normal FFT','FontSize',7)
  
     
    subplot(2,2,3);
      grid on ;
      hold all;
      plot(distance,dBFS_imag,'g','linewidth',2);
-     axis([-25 25 -140 200]);
+    %  axis([-25 25 -140 0]);
 %     axis([-25 25 -140 0]);
      title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
      xlabel('Distance[m]','FontSize',18);
      ylabel('FFT output [dBFS]','FontSize',18);
      set(gca,'FontSize',18,'FontWeight','bold');
-     legend('SFFT','Inbuilt FFT','FontSize',7)
+     legend('SFFT','Normal FFT','FontSize',7)
  
     subplot(2,2,4);
      grid on ;
      hold all;
      plot(distance,dBFS_cmplx,'r','linewidth',1);
-     axis([-25 25 -140 200]);
+    %  axis([-25 25 -140 0]);
 %     axis([-25 25 -140 0]);
      title('1D FFT Amplitude profile(per chirp)','FontSize',20);
      xlabel('Distance[m]','FontSize',18);
      ylabel('FFT output [dBFS]','FontSize',18);
      set(gca,'FontSize',18,'FontWeight','bold');
      drawnow;
-     legend('SFFT','Inbuilt FFT','FontSize',7)
+     legend('SFFT','Normal FFT','FontSize',7)
+
+% indices = (dBFS_real_s ~= -Inf);
+% fprintf("  Expected Sparsity : %d \n ",k);
+% fprintf("  Calculated Sparsity %d  \n \n",sum(indices));
+% err = sum((dBFS_real(indices)-dBFS_real_s(indices)).^2)/length(indices);
+% r_mean = sum(dBFS_real(indices)./dBFS_real_s(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in real values is %d \n",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in real values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (dBFS_imag_s ~= -Inf);
+% fprintf("  Expected Sparsity : %d \n ",k);
+% fprintf("  Calculated Sparsity %d  \n \n",sum(indices));
+% err = sum((dBFS_imag(indices)-dBFS_imag_s(indices)).^2)/length(indices);
+% r_mean = sum(dBFS_imag(indices)./dBFS_imag_s(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in imag values is %d \n",int64((idx+Dx-1)/Dx),err);
+% fprintf(" MEAN of Value ratio Loop index %d in imag values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (dBFS_cmplx_s ~= -Inf);
+% fprintf("  Expected Sparsity : %d \n ",k);
+% fprintf("  Calculated Sparsity %d  \n \n",sum(indices));
+% err = sum((dBFS_cmplx(indices)-dBFS_cmplx_s(indices)).^2)/length(indices);
+% r_mean = sum(dBFS_cmplx(indices)./dBFS_cmplx_s(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in cmplx values is %d \n ",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+
+% indices = (abs(sfft_real) ~= 0);
+% err = sum((R11(indices)-sfft_real(indices)).^2)/length(indices);
+% r_mean = sum(R11(indices)./sfft_real(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in real values is %d \n",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in real values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (abs(sfft_imag) ~= 0);
+% err = sum((I11(indices)-sfft_imag(indices)).^2)/length(indices);
+% r_mean = sum(I11(indices)./sfft_imag(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in imag values is %d \n",int64((idx+Dx-1)/Dx),err);
+% fprintf(" MEAN of Value ratio Loop index %d in imag values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (abs(sfft) ~= 0);
+% err = sum((ABS11(indices)-sfft(indices)).^2)/length(indices);
+% r_mean = sum(ABS11(indices)./sfft(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in cmplx values is %d \n ",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
 
 
     %  pause(2);
- end
+
+
+    
+
+end
 fprintf("  Inbuilt Runtime = %d \n",runtime_inbuilt);
 fprintf("  Sfft Runtime = %d \n",runtime_sfft);
 
@@ -336,20 +373,35 @@ imag_2 = adcData(:,6);
 % 
 % figure(2);
 % hold on;
-% for  n=1:Dx:plotEnd 
-%     clf;
-%    R2=real_2(n : n+Dx-1);
-%    I2 = imag_2(n : n+Dx-1);
+
+
+%  for  idx=1:Dx:plotEnd 
+% for  idx=1:Dx:plotEnd/3 
+% % for  idx=1:Dx:Dx 
+%     clf;    
+%     R2=real_2(idx : idx+Dx-1);
+%     I2 = imag_2(idx : idx+Dx-1);
+
+
+
+
 %    R22 = fftshift(fft(hanning(length(R2)).*R2));
 %    I22 = fftshift(fft(hanning(length(I2)).*I2));
 %   ABS22 = fftshift(fft(hanning(length(R2+1i*I2)).*(R2+1i*I2)));
  
-%   dB_cmplx = 20*log10(abs(ABS22));
-%   dB_real = 20*log10(abs(R22));
-%   dB_imag = 20*log10(abs(I22));
-%   dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5));
-%   dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5));
-%   dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5));
+
+%     sfft_real = fftshift(outer_loop(R2,n,k,g,d,B,delta,G));
+%     sfft_imag = fftshift(outer_loop(I2,n,k,g,d,B,delta,G));
+%     sfft = fftshift(outer_loop(R2+1i*I2,n,k,g,d,B,delta,G));
+    
+    
+%     dB_cmplx = 20*log10(abs(sfft));  
+%     dB_real = 20*log10(abs(sfft_real));
+%     dB_imag = 20*log10(abs(sfft_imag));
+%     dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+%     dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+%     dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    
 
 %  subplot(2,2,1)  
 %  hold all;
@@ -362,27 +414,11 @@ imag_2 = adcData(:,6);
 %     grid on ;
 %     set(gca,'FontSize',18,'FontWeight','bold');
      
-%  %  subplot(2,3,2)
-% %     plot( R2,'b','linewidth',2);
-% %     title('IQ time domain signal for real data','FontSize',20);
-% %     xlabel('time(*0.1 us)','FontSize',18);
-% %     ylabel('adc value','FontSize',18);
-% %    axis([-25 25 -500 500]);
-% %      grid on ;
-
-% %   subplot(2,3,3)
-% %    plot( I2,'r','linewidth',2); 
-% %    title('IQ time domain signal for imaginary data','FontSize',20);
-% %    xlabel('time(*0.1 us)','FontSize',18);
-% %    ylabel('adc value','FontSize',18);
-% %    axis([-25 25 -500 500]);
-% %    grid on ;
-% %    set(gca,'FontSize',18,'FontWeight','bold')
 
 %   subplot(2,2,2);  
 %    grid on ;
 %    hold all;
-%    plot(distance,dBFS_real,'b','linewidth',2);
+%    stem(distance,dBFS_real_s,'linewidth',2);
 %    axis([-25 25 -140 0]);
 %    title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
 %    xlabel('Distance[m]','FontSize',18);
@@ -393,7 +429,7 @@ imag_2 = adcData(:,6);
 %   subplot(2,2,3);
 %     grid on ;
 %     hold all;
-%     plot(distance,dBFS_imag,'g','linewidth',2);
+%     stem(distance,dBFS_imag_s,'linewidth',2);
 %     axis([-25 25 -140 0]);
 %     title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
 %     xlabel('Distance[m]','FontSize',18);
@@ -403,14 +439,94 @@ imag_2 = adcData(:,6);
 %    subplot(2,2,4);
 %     grid on ;
 %     hold all;
-%     plot(distance,dBFS_cmplx,'r','linewidth',1);
+%     stem(distance,dBFS_cmplx_s,'linewidth',1);
 %     axis([-25 25 -140 0]);
 %     title('1D FFT Amplitude profile(per chirp)','FontSize',20);
 %     xlabel('Distance[m]','FontSize',18);
 %     ylabel('FFT output [dBFS]','FontSize',18);
 %     set(gca,'FontSize',18,'FontWeight','bold');
-%    drawnow;
    
+%   dB_cmplx = 20*log10(abs(ABS22));
+%   dB_real = 20*log10(abs(R22));
+%   dB_imag = 20*log10(abs(I22));
+%   dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5));
+%   dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5));
+%   dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5));
+   
+    
+%     % figure;
+%     subplot(2,2,1)
+%     hold all;
+%     plot( distance,R2,'b','linewidth',1);
+%     plot( distance,I2,'r','linewidth',1);
+%     title('IQ time domain signal','FontSize',20);
+%     axis([-25 25 -500 500]);
+%     xlabel('Samples','FontSize',18);
+%     ylabel('ADC value','FontSize',18);
+%     grid on ;
+%     set(gca,'FontSize',18,'FontWeight','bold');
+
+
+%     subplot(2,2,2);  
+%     grid on ;
+%     hold all;
+%     plot(distance,dBFS_real,'k','linewidth',2);
+%     axis([-25 25 -140 0]);
+%     %     axis([-25 25 -140 0]);
+%     title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
+%     xlabel('Distance[m]','FontSize',18);
+%     ylabel('FFT output [dBFS]','FontSize',18);
+%     set(gca,'FontSize',18,'FontWeight','bold');
+%     legend('SFFT','Normal FFT','FontSize',7)
+
+
+%     subplot(2,2,3);
+%     grid on ;
+%     hold all;
+%     plot(distance,dBFS_imag,'g','linewidth',2);
+%     axis([-25 25 -140 0]);
+%     %     axis([-25 25 -140 0]);
+%     title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
+%     xlabel('Distance[m]','FontSize',18);
+%     ylabel('FFT output [dBFS]','FontSize',18);
+%     set(gca,'FontSize',18,'FontWeight','bold');
+%     legend('SFFT','Normal FFT','FontSize',7)
+
+%     subplot(2,2,4);
+%     grid on ;
+%     hold all;
+%     plot(distance,dBFS_cmplx,'r','linewidth',1);
+%     axis([-25 25 -140 0]);
+%     %     axis([-25 25 -140 0]);
+%     title('1D FFT Amplitude profile(per chirp)','FontSize',20);
+%     xlabel('Distance[m]','FontSize',18);
+%     ylabel('FFT output [dBFS]','FontSize',18);
+%     set(gca,'FontSize',18,'FontWeight','bold');
+%     drawnow;
+%     legend('SFFT','Normal FFT','FontSize',7)
+
+%    drawnow;
+
+%     indices = (dBFS_real_s ~= -Inf);
+%     % disp(indices)
+%     err = sum((dBFS_real(indices)-dBFS_real_s(indices)).^2)/length(indices);
+%     r_mean = sum(dBFS_real(indices)./dBFS_real_s(indices))/length(indices);
+%     % fprintf(" MEAN SQUARE ERROR Loop index %d in real values is %d \n",int64((idx+Dx-1))/Dx,err);
+%     % fprintf(" MEAN of Value ratio index %d in real values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+%     indices = (dBFS_imag_s ~= -Inf);
+%     err = sum((dBFS_imag(indices)-dBFS_imag_s(indices)).^2)/length(indices);
+%     r_mean = sum(dBFS_imag(indices)./dBFS_imag_s(indices))/length(indices);
+%     % fprintf(" MEAN SQUARE ERROR Loop index %d in imag values is %d \n",int64((idx+Dx-1)/Dx),err);
+%     % fprintf(" MEAN of Value ratio index %d in imag values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+%     indices = (dBFS_cmplx_s ~= -Inf);
+%     err = sum((dBFS_cmplx(indices)-dBFS_cmplx_s(indices)).^2)/length(indices);
+%     r_mean = sum(dBFS_cmplx(indices)./dBFS_cmplx_s(indices))/length(indices);
+%     % fprintf(" MEAN SQUARE ERROR Loop index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,err);
+%     % fprintf(" MEAN of Value ratio index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+
+
+%     %  pause(2);
+
 % end
 % 
 % 

@@ -1,15 +1,91 @@
 function x_f = experiment()
 % x_f - True FFT
+clc;
+clear all;
+close all;
+%% global variables
+% Based on sensor configuration.
+   numADCBits = 16; % number of ADC bits per sample.
+   numADCSamples = 256; % number of ADC samples per chirp.
+   numRx = 4; % number of receivers in AWR1243.
+   chirpSize = numADCSamples*numRx;
+   chirploops= 128; % No. of of chirp loops.  
+   numLanes = 4; % do not change. number of lanes is always 4
+   isReal = 0; % set to 1 if real only data, 0 if complex data.
+   numFrames = 200; 
+   numChirps = 1;% To consider all the chriploops keep numchrirps = chirploops.
+   sampleRate = 10; % [Msps]
+   timeStep = 1/sampleRate;    % [us]
+   chirpPeriod = numADCSamples * timeStep ; % [us]
+   plotEnd = numADCSamples *  numChirps *numFrames; %for considering all frames.
+   Dx = numADCSamples * numChirps ;
+   timeEnd = (plotEnd-1) * timeStep;
 
-n = 4*128*8192;
-k = 100;
+%% read file
+% read .bin file
+fid = fopen('../adc_data_Raw_Raw_0.bin','r');
+adcData = fread(fid, 'int16');
+fclose(fid);
+% adcData = adcData1(1:length(adcData1)/numFrames);
+fileSize = size(adcData, 1);
+% one chirp only (next line iin case of multiple chirps)
+% adcData = adcData(1:chirpSize,1);
+% organize data by LVDS lane
+% for complex data
+  remaind = mod(fileSize,8);
+% Make data(Interleaved Data from AWR1243) over 8 columns. 
+if remaind ~= 0
+   adcData =[ adcData;zeros(8-remaind,1)] ;
+end
+   fileSize = length(adcData);
+%% stroing data in LVDS if Real and in cmplx if complex(IQ from mmwave studio)   
+if isReal % For real data 4 columns for 4 receivers
+    adcData = adcData';
+    LVDS = reshape(adcData ,4,[])';
+
+else
+% cmplx has 4 real & 4 imaginary columns for 4 Rceivers for interleaved data format.
+    adcData = adcData';
+    cmplx = reshape(adcData ,8,[])';
+end
+
+%% return receiver data
+if isReal 
+    retValue = LVDS;
+else
+    retValue = cmplx;
+end
+
+%% plotting the data
+adcData = retValue ;
+
+sample = (0:1:plotEnd-1);
+time = (0:timeStep:timeEnd);
+f = (0:1:plotEnd-1);
+f_bin = (0:1:length(adcData)-1);
+
+% % Distance calculation using d=(c*f/(2*slope))
+fdel_bin = (-128:1:127)*((10^7)/256);
+distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
+
+
+% % plotting for all frames (Channel 1)
+ 
+ real_1 = adcData(:,1);        
+ imag_1 = adcData(:,5);
+ 
+ figure(1);
+ hold on;
+
+n = 256;
+k = 20;
 repetitions = 1;
 Bcst_loc=2;
 Bcst_est=0.2;
 Comb_cst=16;
-loc_loops =3;
+loc_loops =5;
 est_loops =12;
-threshold_loops =2;
+threshold_loops =3;
 Comb_loops = 1;
 simulate = 0;
 snr=1000000000;
@@ -42,13 +118,15 @@ LARGE_FREQ = zeros(1,k);
 
 x = fft_recur(x_f);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+INPUT DATA ISSUES
 x_f = run_experiment(x, n,
                lobefrac_loc, tolerance_loc, b_loc,
                B_loc, B_thresh, loc_loops, threshold_loops,
                lobefrac_est, tolerance_est, b_est,
                B_est, est_loops, W_Comb, Comb_loops,
                repetitions, FFTW_OPT, LARGE_FREQ, k);
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
 
 function [x_f] = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc, B_thresh, loops_loc, loops_thresh,
@@ -85,10 +163,11 @@ function [x_f] = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-  x_f = estimate_values(hits,hits_found,
-  x_samp, loops,n, permute_vals, B, B2,
-  filter_timedo,filter_sizet,filter_freqdo, 
-  filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+INPUT DATA ISSUES
+x_f = outer_loop(origx,n, filter_timedo,filter_sizet,filter_freqdo, 
+                        filter_est_timedo,filter_est_sizet,filter_est_freqdo, B2,
+                        num,B,W_Comb,Comb_loops,loop_threshold,location_loops,loops)
 
 
 

@@ -1,16 +1,15 @@
 function X=outer_loop(x,n,k,g,d,B,delta,G)
     %since L is in the order of log(n)
     L = int64(log2(n));
-   
     [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau] = get_the_sets(x,L,n,k,g,d,B,delta);
-  
+    
     [s,union_of_all_sets] = get_s(set_I,L);
   
     I_dash = get_I_dash(union_of_all_sets,s,L);
-  
     set_of_X_r_I_dash = get_x_r_I_dash(I_dash,set_h_sigma,set_o_sigma,set_Z,set_tau,G,L,n);
-  
+    
     X = get_the_fourier_transform(set_of_X_r_I_dash,I_dash,n);
+
     % plot(1:n,X);
     % figure;
     % dBFS_X = 20*log10(abs(X)) - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
@@ -22,7 +21,7 @@ end
 % This function returns a set of Is (I1,I2,....,IL) and
 % the sigma associated with it in the array set_sigma
 function [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau]=get_the_sets(x,L,n,k,g,d,B,delta)
-    set_I=[];
+    set_I={};
     set_h_sigma=[];
     set_o_sigma=[];
     set_tau=[];
@@ -30,7 +29,7 @@ function [set_I,set_h_sigma,set_o_sigma,set_Z,set_tau]=get_the_sets(x,L,n,k,g,d,
 
     for i=1:L
         [I,h_sigma,o_sigma,Z,tau]=inner_location_loop(x,n,k,g,d,B,delta);
-        set_I=[set_I ;I];
+        set_I{i} = I;
         set_h_sigma=[set_h_sigma;h_sigma];
         set_o_sigma=[set_o_sigma;o_sigma];
         set_Z=[set_Z;Z];
@@ -45,12 +44,13 @@ end
 function [s,union_of_all_sets]=get_s(I,L)
     union_of_all_sets=[];
     for i=1:L
-        union_of_all_sets=union(union_of_all_sets,I(i,:));
+        union_of_all_sets=union(union_of_all_sets,I{i});
     end
 
     s=zeros(max(union_of_all_sets)+1,1);
     for r=1:L
-        I_r=I(r,:);
+        I_r=I{r};
+
         num_elements=length(I_r);
         s(I_r(1:num_elements)+1)=s(I_r(1:num_elements)+1)+1;
     end
@@ -96,7 +96,14 @@ function X_estim=find_estimates(h_sigma,o_sigma,tau,G,I,Z,n)
     X_estim=zeros(1,n);
 
     for idx=1:length(I)
+        % disp("I(idx)");
+        % disp(I(idx));
         k=I(idx)+1;
+
+        % disp(h_sigma(k));
+        % disp(o_sigma(k));
+        % disp("\n");
+
         X_estim(k)=(Z(h_sigma(k)+1)*exp((1i*2*pi*tau*(k-1))/n))/G(o_sigma(k)+1);
     end
 

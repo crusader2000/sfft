@@ -29,7 +29,7 @@ end
 
 function [sigma,tau]=get_sigma_and_tau(n)
     tau=randi([0,n-1],1,1);
-    sigma=1;
+    sigma= 2*randi([0,n/2-1],1,1)+1;
     % fprintf("  Randomly selected sigma and tau \n tau = %d sigma= %d\n",tau,sigma);
 end
 
@@ -38,8 +38,8 @@ end
 function x_permute=permute(x,sigma,tau,n)
     % Returns a permuted signal
     % Assumption: The signal is periodic with period n
-    i=0:n-1;
-    permute_order=int64(mod((sigma*i+tau),n))+1;
+    ii=0:n-1;
+    permute_order=int64(mod((sigma*ii+tau),n))+1;
     x_permute=x(permute_order);
 end
 
@@ -64,12 +64,16 @@ end
 
 % Step 4: Making the hash function and offset function
 function h_sigma=hash_function(n,sigma,B)
-    h_sigma=floor((0:sigma*B:sigma*B*(n-1))/n);
+    h_sigma=mod((0:sigma*B:sigma*B*(n-1)),B);
 end
 
 function o_sigma=offset_function(h_sigma,n,sigma,B)
     % h_sigma is the list returned by the hash function
-    o_sigma=(sigma*(0:n-1))-((n/B)*h_sigma);
+    
+    % o_sigma=mo1d((mod((sigma*(0:n-1)-((n/B)*h_sigma)),n)+n),n);
+
+    h_sigma_dash=floor((0:sigma*B:sigma*B*(n-1))/n);
+    o_sigma=sigma*(0:n-1)-((n/B)*h_sigma_dash);
 end
 
 % Step 5: The set which is the output in location loop
