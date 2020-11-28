@@ -23,7 +23,7 @@ close all;
 
 %% read file
 % read .bin file
-fid = fopen('adc_data_Raw_Raw_0.bin','r');
+fid = fopen('../adc_data_Raw_Raw_0.bin','r');
 adcData = fread(fid, 'int16');
 fclose(fid);
 % adcData = adcData1(1:length(adcData1)/numFrames);
@@ -85,7 +85,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  % TIMING     = false;
  
   n = 256;
-  k = 10;
+  k = 20;
   repetitions = 1;
   Bcst_loc=2;
   Bcst_est=0.2;
@@ -250,14 +250,15 @@ function x_f = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc, B
   
   [filtert,w_loc] = make_dolphchebyshev_t(lobefrac_loc, tolerance_loc);
   [filter_timedo,filter_sizet,filter_freqdo] = make_multiple_t(filtert, w_loc, n, b_loc);
-  
 
   [filtert_est,w_est] = make_dolphchebyshev_t(lobefrac_est, tolerance_est);
   [filter_est_timedo,filter_est_sizet,filter_est_freqdo] = make_multiple_t(filtert_est, w_est, n, b_est);
+  % disp(length(filter_freqdo));
   disp("CALCULATED FILTERS");  
+
   x_f = outer_loop(x, n, filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo, B_est, B_thresh, B_loc, W_Comb,Comb_loops, loops_thresh, loops_loc, loops_loc + loops_est);
   
-  % plot(1:length(filter_freqdo),filter_freqdo);
+  % plot(1:length(filter_freqdo),20*log10(abs(filter_freqdo)));
   % figure;
 end
 
@@ -271,7 +272,7 @@ function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
  end
 
 %%%%%%%%%%%%%%%%%%%% NOT UPDATING FOR SOME REASON
- w = 256;
+ w = 128;
 
  x = zeros(1,w);
 
