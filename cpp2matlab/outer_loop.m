@@ -1,13 +1,16 @@
-function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_freqdo, 
-                                  filter_est_timedo,filter_est_sizet,filter_est_freqdo, B2,
-                                  num,B,W_Comb,Comb_loops,loop_threshold,location_loops,
-                                  loops)
-
+function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_freqdo,filter_est_timedo,filter_est_sizet,filter_est_freqdo, B2,num,B,W_Comb,Comb_loops,loop_threshold,location_loops, loops)
+  disp("STARTING OUTER LOOP");
+  WITH_COMB  = false;
+  ALGORITHM1 = true;
+  VERBOSE    = false;
     permute_vals = zeros(1,loops);
     permuteb_vals = zeros(1,loops);
 
-  
-  x_samp = {}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OVRWRITING SOME VALUES
+  B = 32;
+  num = 20;
+
+  x_samp = {};
   for ii = 0:loops
     if ii<location_loops
     x_samp{ii+1} = zeros(1,B);
@@ -30,11 +33,15 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
   %  BEGIN INNER LOOPS
 
   for ii=0:loops-1
+    % disp("RUNNING INNER LOOP NUMBER");
+    % disp(ii+1);
+
     a = 0;
     b = 0;
 
     while gcd(a, n) ~= 1
-      a = int(mod(randi(n),n));
+
+      a = int32(mod(randi(n),n));
     end
 
     ai = mod_inverse(a, n);
@@ -42,7 +49,7 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
     permute_vals(ii+1) = ai;
     permuteb_vals(ii+1) = b;
 
-    perform_location = int64(ii < location_loops);
+    perform_location = int32(ii < location_loops);
 
     if perform_location
       cur_B = B;
@@ -58,55 +65,49 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
 
     J = zeros(1,num);
 
-    [x_samp{ii+1},J] = inner_loop_locate(origx, n, cur_filter_timedo,
-                      cur_filter_sizet,cur_filter_freqdo, num, cur_B,
-                      a, ai, b, J);
+    [x_samp{ii+1},J] = inner_loop_locate(origx, n, cur_filter_timedo,cur_filter_sizet,cur_filter_freqdo, num, cur_B,a, ai, b);
 
     if perform_location 
-      [score, hits, hits_found] = inner_loop_filter_regular(J, n, num, cur_B,
-                                  a, ai, b, loop_threshold,
-                                  score, hits, hits_found);
+      [score, hits, hits_found] = inner_loop_filter_regular(J, n, num, cur_B,a, ai, b, loop_threshold,score, hits, hits_found);
     end
-
-  
   end
   
   %END INNER LOOPS
-  oloop_output = estimate_values(hits,hits_found,
-      x_samp, loops,n, permute_vals, B, B2,
-      filter_timedo,filter_sizet,filter_freqdo, 
-      filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops)
+  oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops);
 end
 
-
-function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filter_freqdo,
-                     num,B,a,ai,b)
+function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filter_freqdo,num,B,a,ai,b)
 
   if mod(n,B) ~= 0
     disp("Warning: n is not divisible by B, which algorithm expects.\n");
   end
   
-  x_sampt = zeros(1,n);
-
+  x_sampt = zeros(1,B);
+  % disp(filter_sizet);
   index=b;
-  for ii = 0:filter_sizet
-    x_sampt[mod(ii,B)+1] += origx[index+1] * filter_timedo[ii+1];
+  for ii = 0:filter_sizet-1
+    x_sampt(mod(ii,B)+1) = x_sampt(mod(ii,B)+1) + origx(index+1)*filter_timedo(ii+1);
     index = mod((index+ai),n);
   end
 
+  % disp("INNER LOOP LOCATE FFT_RECUR");
   x_samp = fft_recur(x_sampt);
+  % disp(size(x_samp));
+  % disp(B);
+  samples = abs(x_samp(1:B));
 
-  samples = abs(x_samp[:B]);
-
-  J= find_largest_indices(num,samples);
+  % disp("INNER LOOP LOCATE FIND_LARGEST_INDICES");
+  if num < B
+    J= find_largest_indices(num,samples);
+  else
+    J= find_largest_indices(B,samples);
+  end
 end
 
-
-function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,loop_threshold,
-                              score, hits, hits_found)
+function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,loop_threshold,score, hits, hits_found)
   for ii=0:num-1
-    low = mod((int64(ceil((J(ii+1) - 0.5) * n / B)) + n),n);
-    high = mod((int64(ceil((J(ii+1) + 0.5) * n / B)) + n),n);
+    low = mod((int32(ceil((J(ii+1) - 0.5) * n / B)) + n),n);
+    high = mod((int32(ceil((J(ii+1) + 0.5) * n / B)) + n),n);
     loc = timesmod(low, a, n);
     
     jj= low;
@@ -124,10 +125,7 @@ function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,
   end
 end
 
-function oloop_output = estimate_values(hits,hits_found,
-                x_samp, loops,n, permute_vals, B, B2,
-                filter_timedo,filter_sizet,filter_freqdo, 
-                filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops)
+function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops)
   
   oloop_output = zeros(1,n);
   values = zeros(2,loops);
@@ -148,24 +146,29 @@ function oloop_output = estimate_values(hits,hits_found,
         cur_filter_freqdo = filter_est_freqdo;  
       end
       permuted_index= timesmod(permute_vals(jj+1), hits(ii+1),  n);
-      hashed_to = (permuted_index / (n / cur_B));
+      permuted_index = int32(permuted_index);
+      cur_B = int32(cur_B);
+      n = int32(n);
+     
+      hashed_to = ((permuted_index*cur_B)/n);
       dista = mod(permuted_index , (n / cur_B));
      
       if dista > ((n/cur_B)/2) 
-        hashed_to = mod((hashed_to + 1),cur_B);
+        hashed_to = hashed_to + 1;
         dista = (dista -(n/cur_B));
       end
       dista = mod((n - dista),n);
 
-      filter_value = cur_filter_freqdo(dista);
-      
-      values(1,position+1) = real(x_samp{jj+1}(hashed_to) / filter_value);
-      values(2,position+1) = imag(x_samp{jj+1}(hashed_to) / filter_value);
+      hashed_to = mod(hashed_to ,cur_B);
+      filter_value = cur_filter_freqdo(dista+1);
+
+      values(1,position+1) = real(x_samp{jj+1}(hashed_to+1) / filter_value);
+      values(2,position+1) = imag(x_samp{jj+1}(hashed_to+1) / filter_value);
       position = position +1;
 
     end
 
-    location = int64((loops + 1) / 2);
+    location = int32((loops + 1) / 2);
 
     values(1,:) = median(values(1,:));
     values(2,:) = median(values(2,:));
@@ -198,7 +201,7 @@ function answer = gcd(a,b)
 end
 
 function answer = timesmod(x, a, n) 
- answer = int64(mod((int64(x) * a),n));
+ answer = int32(mod((int32(x) * a),n));
 end
 
 function v = mod_inverse(a, n) 
@@ -221,9 +224,11 @@ function v = mod_inverse(a, n)
   if v<0 
   v = mod((v+n),n);
   end
-  end
+end
 
-  function output = find_largest_indices(num,samples)
+function output = find_largest_indices(num,samples)
   [sorted,I] = sort(samples);
+  % disp(size(I));
+  % disp(num)
   output = I(1:num);
 end 

@@ -23,7 +23,7 @@ close all;
 
 %% read file
 % read .bin file
-fid = fopen('../adc_data_Raw_Raw_0.bin','r');
+fid = fopen('adc_data_Raw_Raw_0.bin','r');
 adcData = fread(fid, 'int16');
 fclose(fid);
 % adcData = adcData1(1:length(adcData1)/numFrames);
@@ -34,6 +34,7 @@ fileSize = size(adcData, 1);
 % for complex data
   remaind = mod(fileSize,8);
 % Make data(Interleaved Data from AWR1243) over 8 columns. 
+
 if remaind ~= 0
    adcData =[ adcData;zeros(8-remaind,1)] ;
 end
@@ -75,8 +76,8 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  imag_1 = adcData(:,5);
  
 
- figure(1);
- hold on;
+%  figure(1);
+%  hold on;
 
  WITH_COMB  = false;
  ALGORITHM1 = true;
@@ -84,7 +85,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  % TIMING     = false;
  
   n = 256;
-  k = 20;
+  k = 10;
   repetitions = 1;
   Bcst_loc=2;
   Bcst_est=0.2;
@@ -107,8 +108,8 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
   lobefrac_loc = 0.5 / (BB_loc);
   lobefrac_est = 0.5 / (BB_est);
 
-  b_loc = int64(1.2*1.1*( n/BB_loc));
-  b_est = int64(1.4*1.1*( n/BB_est));
+  b_loc = int32(1.2*1.1*( n/BB_loc));
+  b_est = int32(1.4*1.1*( n/BB_est));
 
   B_loc = floor_to_pow2(BB_loc);
   B_thresh = 2*k;
@@ -129,35 +130,20 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       R1=real_1(idx : idx+Dx-1);
       I1 = imag_1(idx : idx+Dx-1);
       x = R1 + 1i*I1;
+      disp("SFFT REAL BEING CALCULATED");
+      sfft_real = fftshift(run_experiment(R1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
+      sfft_imag = fftshift(run_experiment(I1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
+      sfft = fftshift(run_experiment(x',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
 
-      sfft_real = fftshift(run_experiment(R1, n,
-                    lobefrac_loc, tolerance_loc, b_loc,
-                    B_loc, B_thresh, loc_loops, threshold_loops,
-                    lobefrac_est, tolerance_est, b_est,
-                    B_est, est_loops, W_Comb, Comb_loops,
-                    repetitions, FFTW_OPT, LARGE_FREQ, k));
-
-      sfft_imag = fftshift(run_experiment(I1, n,
-                    lobefrac_loc, tolerance_loc, b_loc,
-                    B_loc, B_thresh, loc_loops, threshold_loops,
-                    lobefrac_est, tolerance_est, b_est,
-                    B_est, est_loops, W_Comb, Comb_loops,
-                    repetitions, FFTW_OPT, LARGE_FREQ, k));
-      sfft = fftshift(run_experiment(x, n,
-                    lobefrac_loc, tolerance_loc, b_loc,
-                    B_loc, B_thresh, loc_loops, threshold_loops,
-                    lobefrac_est, tolerance_est, b_est,
-                    B_est, est_loops, W_Comb, Comb_loops,
-                    repetitions, FFTW_OPT, LARGE_FREQ, k));
-
-      
-      dB_cmplx = 20*log10(3.4*abs(sfft));  
+      dB_cmplx = 20*log10(abs(sfft));  
       dB_real = 20*log10(abs(sfft_real));
       dB_imag = 20*log10(abs(sfft_imag));
       dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
       dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
       dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
       
+
+
       subplot(2,2,1)
       hold all;
       plot( distance,R1,'linewidth',1);
@@ -173,7 +159,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       grid on ;
       hold all;
       stem(distance,dBFS_real_s,'linewidth',2);
-      %    axis([-25 25 -140 0]);
+        %  axis([-25 25 -140 0]);
       title('SFFT Amplitude(per chirp-real only)','FontSize',20);
       xlabel('Distance[m]','FontSize',18);
       ylabel('FFT output [dBFS]','FontSize',18);
@@ -216,7 +202,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       plot( distance,R1,'b','linewidth',1);
       plot( distance,I1,'r','linewidth',1);
       title('IQ time domain signal','FontSize',20);
-      axis([-25 25 -500 500]);
+      % axis([-25 25 -500 500]);
       xlabel('Samples','FontSize',18);
       ylabel('ADC value','FontSize',18);
       grid on ;
@@ -226,7 +212,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       grid on ;
       hold all;
       plot(distance,dBFS_real,'k','linewidth',2);
-      % axis([-25 25 -140 0]);
+      % axis([-25 25 -140 0]);0
       title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
       xlabel('Distance[m]','FontSize',18);
       ylabel('FFT output [dBFS]','FontSize',18);
@@ -260,37 +246,43 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
 end
 
 %%%%%%%%% CALCULATING FILTER VALUES AND RUN OUTER LOOP  %%%%%%%%%  
-function [x_f] = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc, B_thresh, loops_loc, loops_thresh,
-		    lobefrac_est, tolerance_est, b_est, B_est, loops_est, W_Comb, Comb_loops,
-		    repetitions, bool FFTW_OPT, LARGE_FREQ, k)
+function x_f = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc, B_thresh, loops_loc, loops_thresh,lobefrac_est, tolerance_est, b_est, B_est, loops_est, W_Comb, Comb_loops,repetitions,FFTW_OPT, LARGE_FREQ, k)
   
   [filtert,w_loc] = make_dolphchebyshev_t(lobefrac_loc, tolerance_loc);
   [filter_timedo,filter_sizet,filter_freqdo] = make_multiple_t(filtert, w_loc, n, b_loc);
   
 
-  [filtert_est,w_est] = make_dolphchebyshev_t(lobefrac_est, tolerance_est, w_est);
+  [filtert_est,w_est] = make_dolphchebyshev_t(lobefrac_est, tolerance_est);
   [filter_est_timedo,filter_est_sizet,filter_est_freqdo] = make_multiple_t(filtert_est, w_est, n, b_est);
+  disp("CALCULATED FILTERS");  
+  x_f = outer_loop(x, n, filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo, B_est, B_thresh, B_loc, W_Comb,Comb_loops, loops_thresh, loops_loc, loops_loc + loops_est);
   
-  x_f = outer_loop(x, n, filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,
-            filter_est_sizet,filter_est_freqdo, B_est, B_thresh, B_loc, W_Comb,
-            Comb_loops, loops_thresh, loops_loc, loops_loc + loops_est);
-        
+  % plot(1:length(filter_freqdo),filter_freqdo);
+  % figure;
 end
 
 % WINDOW FUNCTIONS
 function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
-  w = int((1 / pi) * (1/lobefrac) * acosh(1./tolerance));
- if ~(mod(w,2))
-   w = w-1;
+  disp("CALCULATING DOLPHCHEBYSHEV FILTER");  
+  
+  w = (1 / pi) * (1/lobefrac) * acosh(1./tolerance);
+  if mod(w,2)>0
+   w = w+1;
  end
 
+%%%%%%%%%%%%%%%%%%%% NOT UPDATING FOR SOME REASON
+ w = 256;
+
  x = zeros(1,w);
- t0 = cosh(acosh(1/tolerance) / (w-1));
- 
+
+ t0 = cosh(double(acosh(1/tolerance) / (w-1)));
+
+
  for ii=0:w-1
-  x(ii+1) = Cheb(w-1, t0 * cos((pi * ii) / w)) * tolerance;
+    x(ii+1) = Cheb(w-1, t0 * cos(double((pi * ii) / w))) * tolerance;
   end
- x = fft_recur(x);
+
+  x = fft_recur(x);
  fftshift(x);
 
  x= real(x);
@@ -298,9 +290,9 @@ end
 
 function out = Cheb(m, x)
   if abs(x) <= 1
-    out = cos(m * acos(x));
+    out = cos(double(m * acos(x)));
   else
-    out = real(ccosh(m * cacosh(x)));
+    out = real(cosh(m * acosh(x)));
   end
 end
 
@@ -308,7 +300,6 @@ function [x,w,h] = make_multiple_t(x,w,n,b)
   % x - Time Domain
   % w - Size
   % h - Frequency Domain
-
   g = zeros(1,n);
   h = zeros(1,n);
  
@@ -343,7 +334,6 @@ function [x,w,h] = make_multiple_t(x,w,n,b)
     offsetc = offsetc*const_gain;
   end
 
-
   g = fft_recur(h);
   x = g(1:w)/n;
 end
@@ -369,7 +359,7 @@ function answer = gcd(a,b)
 end
 
 function answer = timesmod(x, a, n) 
-   answer = int64(mod((int64(x) * a),n));
+   answer = int32(mod((int32(x) * a),n));
 end
 
 function v = mod_inverse(a, n) 
