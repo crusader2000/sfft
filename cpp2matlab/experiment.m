@@ -1,4 +1,4 @@
-function x_f = experiment()
+function [] = experiment()
 % x_f - True FFT
 clc;
 clear all;
@@ -74,65 +74,195 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  real_1 = adcData(:,1);        
  imag_1 = adcData(:,5);
  
+
  figure(1);
  hold on;
 
-n = 256;
-k = 20;
-repetitions = 1;
-Bcst_loc=2;
-Bcst_est=0.2;
-Comb_cst=16;
-loc_loops =5;
-est_loops =12;
-threshold_loops =3;
-Comb_loops = 1;
-simulate = 0;
-snr=1000000000;
-std_noise = 0;
-FFTW_OPT = false;
-tolerance_loc = 1.e-6;
-tolerance_est = 1.e-8; 
-n = floor_to_pow2(n);
+ WITH_COMB  = false;
+ ALGORITHM1 = true;
+ VERBOSE    = false;
+ % TIMING     = false;
+ 
+  n = 256;
+  k = 20;
+  repetitions = 1;
+  Bcst_loc=2;
+  Bcst_est=0.2;
+  Comb_cst=16;
+  loc_loops =5;
+  est_loops =12;
+  threshold_loops =3;
+  Comb_loops = 1;
+  simulate = 0;
+  snr=1000000000;
+  std_noise = 0;
+  FFTW_OPT = false;
+  tolerance_loc = 1.e-6;
+  tolerance_est = 1.e-8; 
+  n = floor_to_pow2(n);
 
-BB_loc =  uint8(Bcst_loc*sqrt(n*k/(log2(n))));
-BB_est =  uint8(Bcst_est*sqrt(n*k/(log2(n))));
+  BB_loc =  uint8(Bcst_loc*sqrt(n*k/(log2(n))));
+  BB_est =  uint8(Bcst_est*sqrt(n*k/(log2(n))));
 
-lobefrac_loc = 0.5 / (BB_loc);
-lobefrac_est = 0.5 / (BB_est);
+  lobefrac_loc = 0.5 / (BB_loc);
+  lobefrac_est = 0.5 / (BB_est);
 
-b_loc = int64(1.2*1.1*( n/BB_loc));
-b_est = int64(1.4*1.1*( n/BB_est));
+  b_loc = int64(1.2*1.1*( n/BB_loc));
+  b_est = int64(1.4*1.1*( n/BB_est));
 
-B_loc = floor_to_pow2(BB_loc);
-B_thresh = 2*k;
-B_est = floor_to_pow2(BB_est);
+  B_loc = floor_to_pow2(BB_loc);
+  B_thresh = 2*k;
+  B_est = floor_to_pow2(BB_est);
 
-W_Comb = floor_to_pow2(Comb_cst*n/B_loc);
+  W_Comb = floor_to_pow2(Comb_cst*n/B_loc);
 
-x = zeros(1,n);
+  LARGE_FREQ = zeros(1,k);
 
-x_f = zeros(1,n);
 
-LARGE_FREQ = zeros(1,k);
+%%%%%%%%% CALCULATING AND PLOTTING THE TRANSFORMS %%%%%%%%%  
+%  for  idx=1:Dx:plotEnd 
+    % for  idx=1:Dx:plotEnd/3 
 
-x = fft_recur(x_f);
+  for  idx=1:Dx:Dx 
+      clf;
+      
+      R1=real_1(idx : idx+Dx-1);
+      I1 = imag_1(idx : idx+Dx-1);
+      x = R1 + 1i*I1;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-INPUT DATA ISSUES
-x_f = run_experiment(x, n,
-               lobefrac_loc, tolerance_loc, b_loc,
-               B_loc, B_thresh, loc_loops, threshold_loops,
-               lobefrac_est, tolerance_est, b_est,
-               B_est, est_loops, W_Comb, Comb_loops,
-               repetitions, FFTW_OPT, LARGE_FREQ, k);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      sfft_real = fftshift(run_experiment(R1, n,
+                    lobefrac_loc, tolerance_loc, b_loc,
+                    B_loc, B_thresh, loc_loops, threshold_loops,
+                    lobefrac_est, tolerance_est, b_est,
+                    B_est, est_loops, W_Comb, Comb_loops,
+                    repetitions, FFTW_OPT, LARGE_FREQ, k));
+
+      sfft_imag = fftshift(run_experiment(I1, n,
+                    lobefrac_loc, tolerance_loc, b_loc,
+                    B_loc, B_thresh, loc_loops, threshold_loops,
+                    lobefrac_est, tolerance_est, b_est,
+                    B_est, est_loops, W_Comb, Comb_loops,
+                    repetitions, FFTW_OPT, LARGE_FREQ, k));
+      sfft = fftshift(run_experiment(x, n,
+                    lobefrac_loc, tolerance_loc, b_loc,
+                    B_loc, B_thresh, loc_loops, threshold_loops,
+                    lobefrac_est, tolerance_est, b_est,
+                    B_est, est_loops, W_Comb, Comb_loops,
+                    repetitions, FFTW_OPT, LARGE_FREQ, k));
+
+      
+      dB_cmplx = 20*log10(3.4*abs(sfft));  
+      dB_real = 20*log10(abs(sfft_real));
+      dB_imag = 20*log10(abs(sfft_imag));
+      dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+      dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+      dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+      
+      subplot(2,2,1)
+      hold all;
+      plot( distance,R1,'linewidth',1);
+      plot( distance,I1,'linewidth',1);
+      title('IQ time domain signal','FontSize',20);
+      % axis([-25 25 -500 500]);
+      xlabel('Samples','FontSize',18);
+      ylabel('ADC value','FontSize',18);
+      grid on ;
+      set(gca,'FontSize',18,'FontWeight','bold');
+
+      subplot(2,2,2);  
+      grid on ;
+      hold all;
+      stem(distance,dBFS_real_s,'linewidth',2);
+      %    axis([-25 25 -140 0]);
+      title('SFFT Amplitude(per chirp-real only)','FontSize',20);
+      xlabel('Distance[m]','FontSize',18);
+      ylabel('FFT output [dBFS]','FontSize',18);
+      set(gca,'FontSize',18,'FontWeight','bold');
+
+
+      subplot(2,2,3);
+      grid on ;
+      hold all;
+      stem(distance,dBFS_imag_s,'linewidth',2);
+      % axis([-25 25 -140 0]);
+      title('SFFT Amplitude(per chirp-imag only)','FontSize',20);
+      xlabel('Distance[m]','FontSize',18);
+      ylabel('FFT output [dBFS]','FontSize',18);
+      set(gca,'FontSize',18,'FontWeight','bold');
+
+      subplot(2,2,4);
+      grid on ;
+      hold all;
+      stem(distance,dBFS_cmplx_s,'linewidth',1);
+      % axis([-25 25 -140 0]);
+      title('SFFT Amplitude(per chirp)','FontSize',20);
+      xlabel('Distance[m]','FontSize',18);
+      ylabel('FFT output [dBFS]','FontSize',18);
+      set(gca,'FontSize',18,'FontWeight','bold');
+
+      R11 = fftshift(fft_recur(hanning(length(R1)).*R1));
+      I11 = fftshift(fft_recur(hanning(length(I1)).*I1));
+      ABS11 = fftshift(fft_recur(hanning(length(R1+1i*I1)).*(R1+1i*I1)));
+      dB_cmplx = 20*log10(abs(ABS11));  
+      dB_real = 20*log10(abs(R11));
+      dB_imag = 20*log10(abs(I11));
+      dBFS_real = dB_real  - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+      dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+      dBFS_cmplx= dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+
+      % figure;
+      subplot(2,2,1)
+      hold all;
+      plot( distance,R1,'b','linewidth',1);
+      plot( distance,I1,'r','linewidth',1);
+      title('IQ time domain signal','FontSize',20);
+      axis([-25 25 -500 500]);
+      xlabel('Samples','FontSize',18);
+      ylabel('ADC value','FontSize',18);
+      grid on ;
+      set(gca,'FontSize',18,'FontWeight','bold');
+    
+      subplot(2,2,2);  
+      grid on ;
+      hold all;
+      plot(distance,dBFS_real,'k','linewidth',2);
+      % axis([-25 25 -140 0]);
+      title('1D FFT Amplitude profile(per chirp-real only)','FontSize',20);
+      xlabel('Distance[m]','FontSize',18);
+      ylabel('FFT output [dBFS]','FontSize',18);
+      set(gca,'FontSize',18,'FontWeight','bold');
+      legend('SFFT','Normal FFT','FontSize',7)
+
+      
+      subplot(2,2,3);
+      grid on ;
+      hold all;
+      plot(distance,dBFS_imag,'g','linewidth',2);
+      %  axis([-25 25 -140 0]);
+      title('1D FFT Amplitude profile(per chirp-imag only)','FontSize',20);
+      xlabel('Distance[m]','FontSize',18);
+      ylabel('FFT output [dBFS]','FontSize',18);
+      set(gca,'FontSize',18,'FontWeight','bold');
+      legend('SFFT','Normal FFT','FontSize',7)
+
+      subplot(2,2,4);
+      grid on ;
+      hold all;
+      plot(distance,dBFS_cmplx,'r','linewidth',1);
+      %  axis([-25 25 -140 0]);
+      title('1D FFT Amplitude profile(per chirp)','FontSize',20);
+      xlabel('Distance[m]','FontSize',18);
+      ylabel('FFT output [dBFS]','FontSize',18);
+      set(gca,'FontSize',18,'FontWeight','bold');
+      legend('SFFT','Normal FFT','FontSize',7)
+      drawnow;
+  end
 end
 
+%%%%%%%%% CALCULATING FILTER VALUES AND RUN OUTER LOOP  %%%%%%%%%  
 function [x_f] = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc, B_thresh, loops_loc, loops_thresh,
 		    lobefrac_est, tolerance_est, b_est, B_est, loops_est, W_Comb, Comb_loops,
 		    repetitions, bool FFTW_OPT, LARGE_FREQ, k)
-  
   
   [filtert,w_loc] = make_dolphchebyshev_t(lobefrac_loc, tolerance_loc);
   [filter_timedo,filter_sizet,filter_freqdo] = make_multiple_t(filtert, w_loc, n, b_loc);
@@ -141,68 +271,10 @@ function [x_f] = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc,
   [filtert_est,w_est] = make_dolphchebyshev_t(lobefrac_est, tolerance_est, w_est);
   [filter_est_timedo,filter_est_sizet,filter_est_freqdo] = make_multiple_t(filtert_est, w_est, n, b_est);
   
-
-  % filter_noise = 0;
-  % filter_noise_est = 0;
-  
-  % for(int i = 0; i < 10; i++) {
-  %   filter_noise = std::max(filter_noise,
-	% 		    std::max(cabs(filter.freq[n/2+i]),
-	% 			     cabs(filter.freq[n/2-i])));
-  %   filter_noise_est = std::max(filter_noise_est,
-  %                               std::max(cabs(filter_est.freq[n/2+i]),
-  %                                        cabs(filter_est.freq[n/2-i])));
-  % }
-  % printf(" Noise in filter: Location Filter : %lg; Estimation Filter %lg\n", filter_noise, filter_noise_est);
-  % printf("******************************************************************************\n\n");
-
-
-  % printf("sFFT Results\n");
-  % printf("******************************************************************************\n");
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-INPUT DATA ISSUES
-x_f = outer_loop(origx,n, filter_timedo,filter_sizet,filter_freqdo, 
-                        filter_est_timedo,filter_est_sizet,filter_est_freqdo, B2,
-                        num,B,W_Comb,Comb_loops,loop_threshold,location_loops,loops)
-
-
-
-  % int num_candidates= (int)oloop_output.size();
-  % std::pair<real_t, int> *candidates = (std::pair<real_t, int> *)malloc(num_candidates*sizeof(*candidates));
-  % complex_t *x_f_Large = (complex_t *)calloc(n,sizeof(*x_f_Large));
-  % complex_t *ans_Large = (complex_t *)calloc(n,sizeof(*ans_Large));
-
-  % int counter=0;
-
-  % for(__typeof(oloop_output.begin()) it = oloop_output.begin(); it != oloop_output.end(); it++){
-  %    int key = it->first;
-  %    complex_t value =it->second;
-  %    candidates[counter] = std::make_pair(cabs(value), key);
-  %    counter++;
-  %  }
-
-  % //Enter ALL large frequences as zero
-  % for(int i = 0; i < k; i++){
-  %     x_f_Large[LARGE_FREQ[i]]=x_f[LARGE_FREQ[i]];
-  % }
-
-  % std::nth_element(candidates, candidates + num_candidates - k, candidates + num_candidates);
-  % for(int i = 0; i < k; i++){
-  %   int key = candidates[num_candidates - k + i].second;
-  %   ans_Large[key] = oloop_output[key];
-  % }
-
-  % int large_found = 0;
-  % int FOUND=0;
-  % for(int i = 0; i < k; i++){
-  %   FOUND += (unsigned int)oloop_output.count(LARGE_FREQ[i]);
-  %   large_found += (ans_Large[(LARGE_FREQ[i])] != 0);
-  % }
-
+  x_f = outer_loop(x, n, filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,
+            filter_est_sizet,filter_est_freqdo, B_est, B_thresh, B_loc, W_Comb,
+            Comb_loops, loops_thresh, loops_loc, loops_loc + loops_est);
+        
 end
 
 % WINDOW FUNCTIONS
@@ -256,26 +328,24 @@ function [x,w,h] = make_multiple_t(x,w,n,b)
   offset = b/2;
 
   for ii = 0:n-1
-    h(mod((i+n +offset),n)+1) = s;
+    h(mod((ii+n +offset),n)+1) = s;
     maximum = max(maximum,abs(s));
-    s = s + (g(mod((i + b),n)+1) - g(i+1));
+    s = s + (g(mod((ii + b),n)+1) - g(ii+1));
   end
 
   h = h/maximum;
 
   offsetc = 1;
-  const_gain=exp((-2*pi * I * (w/2)) / n);
+  const_gain=exp((-2*pi * 1i * (w/2)) / n);
   
   for ii = 0:n-1
-    h(i) = h(i)*offsetc;
+    h(ii+1) = h(ii+1)*offsetc;
     offsetc = offsetc*const_gain;
   end
 
 
   g = fft_recur(h);
   x = g(1:w)/n;
-
-
 end
 
 
@@ -298,8 +368,8 @@ function answer = gcd(a,b)
   end
 end
 
-function answer = timesmod(const int &x, const int &a, const int &n) 
-   answer = int64(mod((int64(x) .* a),n));
+function answer = timesmod(x, a, n) 
+   answer = int64(mod((int64(x) * a),n));
 end
 
 function v = mod_inverse(a, n) 
@@ -311,7 +381,7 @@ function v = mod_inverse(a, n)
   t = ii/a;
   x = a;
   
-  a = ii % x;
+  a = mod(ii , x);
   ii = x;
   x = d;
   d = v - t*x;

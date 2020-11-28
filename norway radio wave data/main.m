@@ -314,8 +314,8 @@ for  idx=1:Dx:Dx
      xlabel('Distance[m]','FontSize',18);
      ylabel('FFT output [dBFS]','FontSize',18);
      set(gca,'FontSize',18,'FontWeight','bold');
-     drawnow;
      legend('SFFT','Normal FFT','FontSize',7)
+     drawnow;
 
 % indices = (dBFS_real_s ~= -Inf);
 % fprintf("  Expected Sparsity : %d \n ",k);
