@@ -85,13 +85,13 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  % TIMING     = false;
  
   n = 256;
-  k = 20;
+  k = 5;
   repetitions = 1;
-  Bcst_loc=2;
-  Bcst_est=0.2;
+  Bcst_loc=4;
+  Bcst_est=1;
   Comb_cst=16;
-  loc_loops =5;
-  est_loops =12;
+  loc_loops =16;
+  est_loops =1;
   threshold_loops =3;
   Comb_loops = 1;
   simulate = 0;
@@ -119,12 +119,15 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
 
   LARGE_FREQ = zeros(1,k);
 
+  disp(B_loc);
+  disp(B_thresh);
+  disp(B_est);
 
 %%%%%%%%% CALCULATING AND PLOTTING THE TRANSFORMS %%%%%%%%%  
 %  for  idx=1:Dx:plotEnd 
-    % for  idx=1:Dx:plotEnd/3 
+    for  idx=1:Dx:plotEnd/3 
 
-  for  idx=1:Dx:Dx 
+  % for  idx=1:Dx:Dx 
       clf;
       
       R1=real_1(idx : idx+Dx-1);
@@ -134,6 +137,21 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       sfft_real = fftshift(run_experiment(R1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
       sfft_imag = fftshift(run_experiment(I1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
       sfft = fftshift(run_experiment(x',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
+
+      [sorted,I] = sort(abs(sfft),'descend');
+      temp = zeros(1,length(sfft_real));
+      temp(I(1:k)) = sfft(I(1:k));
+      sfft = temp;
+      
+      [sorted,I] = sort(abs(sfft_real),'descend');
+      temp = zeros(1,length(sfft_real));
+      temp(I(1:k)) = sfft_real(I(1:k));
+      sfft_real = temp;
+
+      [sorted,I] = sort(abs(sfft_imag),'descend');
+      temp = zeros(1,length(sfft_real));
+      temp(I(1:k)) = sfft_imag(I(1:k));
+      sfft_imag = temp;
 
       dB_cmplx = 20*log10(abs(sfft));  
       dB_real = 20*log10(abs(sfft_real));
@@ -242,6 +260,46 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       set(gca,'FontSize',18,'FontWeight','bold');
       legend('SFFT','Normal FFT','FontSize',7)
       drawnow;
+
+      % indices = (dBFS_real_s ~= -Inf);
+% fprintf("  Expected Sparsity : %d \n ",B_thresh);
+% fprintf("  Calculated Sparsity %d  \n \n",sum(indices));
+% err = sum((dBFS_real(indices)-dBFS_real_s(indices)).^2)/length(indices);
+% r_mean = sum(dBFS_real(indices)./dBFS_real_s(indices)')/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in real values is %d \n",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in real values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (dBFS_imag_s ~= -Inf);
+% fprintf("  Expected Sparsity : %d \n ",B_thresh);
+% fprintf("  Calculated Sparsity %d  \n \n",sum(indices));
+% err = sum((dBFS_imag(indices)-dBFS_imag_s(indices)).^2)/length(indices);
+% r_mean = sum(dBFS_imag(indices)./dBFS_imag_s(indices)')/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in imag values is %d \n",int64((idx+Dx-1)/Dx),err);
+% fprintf(" MEAN of Value ratio Loop index %d in imag values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (dBFS_cmplx_s ~= -Inf);
+% fprintf("  Expected Sparsity : %d \n ",B_thresh);
+% fprintf("  Calculated Sparsity %d  \n \n",sum(indices));
+% err = sum((dBFS_cmplx(indices)-dBFS_cmplx_s(indices)).^2)/length(indices);
+% r_mean = sum(dBFS_cmplx(indices)./dBFS_cmplx_s(indices)')/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in cmplx values is %d \n ",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+
+% indices = (abs(sfft_real) ~= 0);
+% err = sum((R11(indices)-sfft_real(indices)).^2)/length(indices);
+% r_mean = sum(R11(indices)./sfft_real(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in real values is %d \n",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in real values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (abs(sfft_imag) ~= 0);
+% err = sum((I11(indices)-sfft_imag(indices)).^2)/length(indices);
+% r_mean = sum(I11(indices)./sfft_imag(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in imag values is %d \n",int64((idx+Dx-1)/Dx),err);
+% fprintf(" MEAN of Value ratio Loop index %d in imag values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+% indices = (abs(sfft) ~= 0);
+% err = sum((ABS11(indices)-sfft(indices)).^2)/length(indices);
+% r_mean = sum(ABS11(indices)./sfft(indices))/length(indices);
+% fprintf(" MEAN SQUARE ERROR Loop index %d in cmplx values is %d \n ",int64((idx+Dx-1))/Dx,err);
+% fprintf(" MEAN of Value ratio Loop index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
+
+% pause(2);1
   end
 end
 
@@ -271,12 +329,12 @@ function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
    w = w+1;
  end
 
-%%%%%%%%%%%%%%%%%%%% NOT UPDATING FOR SOME REASON
- w = 128;
+  %%%%%%%%%%%%%%%%%%%% NOT UPDATING FOR SOME REASON
+  w = 128;
 
- x = zeros(1,w);
+  x = zeros(1,w);
 
- t0 = cosh(double(acosh(1/tolerance) / (w-1)));
+  t0 = cosh(double(acosh(1/tolerance) / (w-1)));
 
 
  for ii=0:w-1
@@ -342,11 +400,10 @@ end
 
 % UTILITY FUNCTIONS
 function answer = floor_to_pow2(x)
-    for ii = 1:x
-        if ii<= x
-            answer = ii;
-        end
-        ii = 2*ii;
+    ii = 1;
+    while ii<= x
+      answer = ii;
+      ii = 2*ii;
     end
     answer = answer/2;
 end

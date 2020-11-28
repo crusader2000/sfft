@@ -6,10 +6,6 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
     permute_vals = zeros(1,loops);
     permuteb_vals = zeros(1,loops);
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OVRWRITING SOME VALUES
-  B = 32;
-  num = 20;
-
   x_samp = {};
   for ii = 0:loops
     if ii<location_loops
@@ -37,7 +33,7 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
     % disp(ii+1);
 
     a = 0;
-    b = 0;
+    b = mod(randi(n),n);
 
     while gcd(a, n) ~= 1
 
@@ -49,7 +45,7 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
     permute_vals(ii+1) = ai;
     permuteb_vals(ii+1) = b;
 
-    perform_location = int32(ii < location_loops);
+    perform_location = ii < location_loops;
 
     if perform_location
       cur_B = B;
@@ -227,8 +223,8 @@ function v = mod_inverse(a, n)
 end
 
 function output = find_largest_indices(num,samples)
-  [sorted,I] = sort(samples);
+  [sorted,I] = sort(samples,'descend');
   % disp(size(I));
   % disp(num)
-  output = I(1:num);
+  output = I(1:num)-1;
 end 
