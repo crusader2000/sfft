@@ -85,9 +85,9 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  % TIMING     = false;
  
   n = 256;
-  k = 5;
+  k = 10;
   repetitions = 1;
-  Bcst_loc=4;
+  Bcst_loc=8;
   Bcst_est=1;
   Comb_cst=16;
   loc_loops =16;
@@ -133,7 +133,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       R1=real_1(idx : idx+Dx-1);
       I1 = imag_1(idx : idx+Dx-1);
       x = R1 + 1i*I1;
-      disp("SFFT REAL BEING CALCULATED");
+      % disp("SFFT REAL BEING CALCULATED");
       sfft_real = fftshift(run_experiment(R1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
       sfft_imag = fftshift(run_experiment(I1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
       sfft = fftshift(run_experiment(x',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
@@ -159,8 +159,6 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
       dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
       dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
       dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-      
-
 
       subplot(2,2,1)
       hold all;
@@ -299,7 +297,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
 % fprintf(" MEAN SQUARE ERROR Loop index %d in cmplx values is %d \n ",int64((idx+Dx-1))/Dx,err);
 % fprintf(" MEAN of Value ratio Loop index %d in cmplx values is %d \n \n",int64((idx+Dx-1))/Dx,r_mean);
 
-% pause(2);1
+% pause(2);
   end
 end
 
@@ -312,7 +310,7 @@ function x_f = run_experiment(x, n, lobefrac_loc, tolerance_loc, b_loc, B_loc, B
   [filtert_est,w_est] = make_dolphchebyshev_t(lobefrac_est, tolerance_est);
   [filter_est_timedo,filter_est_sizet,filter_est_freqdo] = make_multiple_t(filtert_est, w_est, n, b_est);
   % disp(length(filter_freqdo));
-  disp("CALCULATED FILTERS");  
+  % disp("CALCULATED FILTERS");  
 
   x_f = outer_loop(x, n, filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo, B_est, B_thresh, B_loc, W_Comb,Comb_loops, loops_thresh, loops_loc, loops_loc + loops_est);
   
@@ -322,7 +320,7 @@ end
 
 % WINDOW FUNCTIONS
 function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
-  disp("CALCULATING DOLPHCHEBYSHEV FILTER");  
+  % disp("CALCULATING DOLPHCHEBYSHEV FILTER");  
   
   w = (1 / pi) * (1/lobefrac) * acosh(1./tolerance);
   if mod(w,2)>0

@@ -1,5 +1,5 @@
 function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_freqdo,filter_est_timedo,filter_est_sizet,filter_est_freqdo, B2,num,B,W_Comb,Comb_loops,loop_threshold,location_loops, loops)
-  disp("STARTING OUTER LOOP");
+  % disp("STARTING OUTER LOOP");
   WITH_COMB  = false;
   ALGORITHM1 = true;
   VERBOSE    = false;
@@ -69,7 +69,7 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
   end
   
   %END INNER LOOPS
-  oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops);
+  oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, permuteb_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops);
 end
 
 function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filter_freqdo,num,B,a,ai,b)
@@ -121,7 +121,7 @@ function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,
   end
 end
 
-function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops)
+function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, permuteb_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops)
   
   oloop_output = zeros(1,n);
   values = zeros(2,loops);
@@ -144,10 +144,10 @@ function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute
       permuted_index= timesmod(permute_vals(jj+1), hits(ii+1),  n);
       permuted_index = int32(permuted_index);
       cur_B = int32(cur_B);
-      n = int32(n);
+      % n = int32(n);
      
-      hashed_to = ((permuted_index*cur_B)/n);
-      dista = mod(permuted_index , (n / cur_B));
+      hashed_to = ((permuted_index*cur_B)/int32(n));
+      dista = mod(permuted_index , (int32(n) / cur_B));
      
       if dista > ((n/cur_B)/2) 
         hashed_to = hashed_to + 1;
@@ -158,13 +158,15 @@ function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute
       hashed_to = mod(hashed_to ,cur_B);
       filter_value = cur_filter_freqdo(dista+1);
 
-      values(1,position+1) = real(x_samp{jj+1}(hashed_to+1) / filter_value);
-      values(2,position+1) = imag(x_samp{jj+1}(hashed_to+1) / filter_value);
+      % exp_factor = exp((1i*2*pi*timesmod(permuteb_vals(jj+1), hits(ii+1), n)/n));
+      exp_factor = 1;
+      values(1,position+1) = real((x_samp{jj+1}(hashed_to+1)*exp_factor) / filter_value);
+      values(2,position+1) = imag((x_samp{jj+1}(hashed_to+1)*exp_factor) / filter_value);
       position = position +1;
 
     end
 
-    location = int32((loops + 1) / 2);
+    location = round((loops + 1) / 2);
 
     values(1,:) = median(values(1,:));
     values(2,:) = median(values(2,:));
@@ -172,7 +174,7 @@ function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute
     realv = values(1,location);
     imagv = values(2,location);
 
-    oloop_output(hits(ii+1)) = realv + 1i*imagv;
+    oloop_output(hits(ii+1)+1) = realv + 1i*imagv;
     
   end
 end
@@ -197,7 +199,7 @@ function answer = gcd(a,b)
 end
 
 function answer = timesmod(x, a, n) 
- answer = int32(mod((int32(x) * a),n));
+ answer = round(mod((x * a),n));
 end
 
 function v = mod_inverse(a, n) 
