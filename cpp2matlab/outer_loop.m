@@ -1,10 +1,7 @@
 function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_freqdo,filter_est_timedo,filter_est_sizet,filter_est_freqdo, B2,num,B,W_Comb,Comb_loops,loop_threshold,location_loops, loops)
   % disp("STARTING OUTER LOOP");
-  WITH_COMB  = false;
-  ALGORITHM1 = true;
-  VERBOSE    = false;
-    permute_vals = zeros(1,loops);
-    permuteb_vals = zeros(1,loops);
+  permute_vals = zeros(1,loops);
+  permuteb_vals = zeros(1,loops);
 
   x_samp = {};
   for ii = 0:loops
@@ -17,23 +14,17 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
  
   hits_found = 0;
 
-  if WITH_COMB
-    pages_hit = num * (n/B) * num * (1 / W_Comb) * location_loops;
-  else
-    pages_hit = num * (n/B) * location_loops;
-  end
-
- score = zeros(1,n);
- hits = zeros(1,n);
+  score = zeros(1,n);
+  hits = zeros(1,n);
   
   %  BEGIN INNER LOOPS
-
   for ii=0:loops-1
     % disp("RUNNING INNER LOOP NUMBER");
     % disp(ii+1);
 
     a = 0;
-    b = mod(randi(n),n);
+    % b = mod(randi(n),n);
+    b = 0;
 
     while gcd(a, n) ~= 1
 
@@ -41,39 +32,47 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
     end
 
     ai = mod_inverse(a, n);
+    % fprintf("ai=%d , a=%d, n=%d, gcd=%d, mod=%d\n",ai,a,n,gcd(a,n),mod(ai*a,n));
 
     permute_vals(ii+1) = ai;
     permuteb_vals(ii+1) = b;
 
-    perform_location = ii < location_loops;
+    % perform_location = ii < location_loops;
 
-    if perform_location
-      cur_B = B;
-      cur_filter_timedo = filter_timedo;
-      cur_filter_sizet = filter_sizet;
-      cur_filter_freqdo = filter_freqdo;
-    else
+    % if perform_location
+    %   cur_B = B;
+    %   cur_filter_timedo = filter_timedo;
+    %   cur_filter_sizet = filter_sizet;
+    %   cur_filter_freqdo = filter_freqdo;
+    % else
       cur_B = B2;
       cur_filter_timedo = filter_est_timedo;
       cur_filter_sizet = filter_est_sizet;
       cur_filter_freqdo = filter_est_freqdo;  
-    end
+    % end
 
     J = zeros(1,num);
 
     [x_samp{ii+1},J] = inner_loop_locate(origx, n, cur_filter_timedo,cur_filter_sizet,cur_filter_freqdo, num, cur_B,a, ai, b);
 
-    if perform_location 
+    % if perform_location 
       [score, hits, hits_found] = inner_loop_filter_regular(J, n, num, cur_B,a, ai, b, loop_threshold,score, hits, hits_found);
-    end
+      
+    % end
   end
+  % disp("loop threshold")
+  % disp(loop_threshold);
+  % disp("hits");
+  % disp(hits);
+  % disp("hits_found");
+  % disp(hits_found);
+
   
   %END INNER LOOPS
   oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute_vals, permuteb_vals, B, B2,filter_timedo,filter_sizet,filter_freqdo, filter_est_timedo,filter_est_sizet,filter_est_freqdo,location_loops);
 end
 
 function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filter_freqdo,num,B,a,ai,b)
-
   if mod(n,B) ~= 0
     disp("Warning: n is not divisible by B, which algorithm expects.\n");
   end
@@ -91,8 +90,9 @@ function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filt
   % disp(size(x_samp));
   % disp(B);
   samples = abs(x_samp(1:B));
-
+  
   % disp("INNER LOOP LOCATE FIND_LARGEST_INDICES");
+
   if num < B
     J= find_largest_indices(num,samples);
   else
@@ -105,6 +105,8 @@ function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,
     low = mod((int32(ceil((J(ii+1) - 0.5) * n / B)) + n),n);
     high = mod((int32(ceil((J(ii+1) + 0.5) * n / B)) + n),n);
     loc = timesmod(low, a, n);
+
+    % fprintf("J(ii+1) = %d, low = %d, high = %d, loc = %d\n",J(ii+1),low,high,loc);
     
     jj= low;
     while jj ~= high
@@ -113,8 +115,8 @@ function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,
         if score(loc+1)==loop_threshold 
           hits(hits_found+1)=loc;
           hits_found = hits_found + 1;
-          loc = mod((loc + a),n);
         end
+        loc = mod((loc + a),n);
 
       jj = mod((jj+1),n);
     end
@@ -202,31 +204,69 @@ function answer = timesmod(x, a, n)
  answer = round(mod((x * a),n));
 end
 
-function v = mod_inverse(a, n) 
-  ii = n;
-  v = 0;
-  d = 1;
 
-  while a>0 
-  t = ii/a;
-  x = a;
-
-  a = mod(ii , x);
-  ii = x;
-  x = d;
-  d = v - t*x;
-  v = x;
+function x = mod_inverse(a, m) 
+	m0 = m; 
+	y = 0;
+	x = 1;
+    a0 = a;
+	if m == 1 
+    x = 0;
   end
 
-  v = mod(v,n);
-  if v<0 
-  v = mod((v+n),n);
+	while (a > 1)
+
+    q = floor(double(a)/double(m)); 
+    % disp("a/m");
+    % disp(floor(a/m));
+    % fprintf("a/m = %f\n",double(a)/double(m));
+    % fprintf("q=%d, a=%d, m=%d\n",q,a,m);
+    
+		t = m ;
+ 
+		m = mod(a,m);
+		a = t ;
+		t = y ;
+
+		y = x - q * y ;
+    x = t ;
+    % fprintf("q=%d, a=%d, m=%d, x=%d, t=%d\n",q,a,m,x,t);
+    
   end
+  
+	if x < 0
+		x = x + m0 ;
+  end
+  % x = mod(x,m0);
+%   disp("x");
+%   disp(x);
+%   disp("mod(a0*x,m)");
+%   disp(mod(a0*x,m0));
 end
 
 function output = find_largest_indices(num,samples)
+
+  % disp("log(samples)");
+  % disp(log(samples));
+
+  % disp("sum(log(samples)>3)");
+  % disp(sum(log(samples)>3));
+
+  % temp = sum(log10(samples)>2);
+
+  % if num > temp
+  %   num = temp;
+  % end
+
+    if num > length(samples)
+    num = length(samples);
+  end
+  
+
   [sorted,I] = sort(samples,'descend');
   % disp(size(I));
   % disp(num)
+  % disp("sorted(1:num)");
+  % disp(sorted(1:num));
   output = I(1:num)-1;
 end 
