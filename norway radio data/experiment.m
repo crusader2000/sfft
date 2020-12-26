@@ -85,15 +85,15 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
  % TIMING     = false;
  
  n = 256;
- k = 15;
+ k = 17;
  repetitions = 1;
  Bcst_loc = 32;
  Bcst_est = 32;
  Comb_cst = 16;
- loc_loops = 1;
- est_loops = 12;
+ loc_loops = 0;
+ est_loops = 6;
 %  threshold_loops = round((loc_loops+est_loops)/2);
- threshold_loops = 10;
+ threshold_loops = 3;
  Comb_loops = 1;
  simulate = 0;
  snr = 1000000000;
@@ -137,6 +137,7 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     for  idx=1:Dx:plotEnd/3 
 
   % for  idx=1:Dx:Dx  
+    % for  idx=Dx+1:Dx:2*Dx  
 
 
     % w = waitforbuttonpress;
@@ -155,27 +156,22 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     I11 = fftshift(fft_recur(hanning(length(I1)).*I1));
     ABS11 = fftshift(fft_recur(hanning(length(R1+1i*I1)).*(R1+1i*I1)));
 
-    % indices = mod(131*(0:255),n);
-    % plot(distance,abs(fftshift(fft_recur(R1))));
+    % stem(distance,abs(R11));
     % figure;
-    % plot(distance,abs(fftshift(fft_recur(R1(indices+1)))));
-    % figure;
-
-
-    dB_cmplx = 20*log10(abs(ABS11));  
-    dB_real = 20*log10(abs(R11));
-    dB_imag = 20*log10(abs(I11));
+    % dB_cmplx = 20*log10(abs(ABS11));  
+    % dB_real = 20*log10(abs(R11));
+    % dB_imag = 20*log10(abs(I11));
     
-    % dB_cmplx = abs(ABS11);  
-    % dB_real = abs(R11);
-    % dB_imag = abs(I11);
+    dB_cmplx = abs(ABS11);  
+    dB_real = abs(R11);
+    dB_imag = abs(I11);
     
-    dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    dBFS_cmplx = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    % dBFS_real = dB_real;
-    % dBFS_imag = dB_imag;
-    % dBFS_cmplx = dB_cmplx;
+    % dBFS_real = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    % dBFS_imag = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    % dBFS_cmplx = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_real = dB_real;
+    dBFS_imag = dB_imag;
+    dBFS_cmplx = dB_cmplx;
 
 
     % disp("SFFT REAL BEING CALCULATED");
@@ -183,44 +179,44 @@ distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
     sfft_imag = fftshift(run_experiment(I1',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
     sfft = fftshift(run_experiment(x',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
 
-    % [sorted,I] = sort(abs(sfft),'descend');
-    % % I = (abs(sfft)~=0);
-    % temp = zeros(1,length(sfft));
-    % % temp(I) = ABS11(I);
-    % % temp(I(1:k)) = ABS11(I(1:k));
-    % temp(I(1:k)) = sfft(I(1:k));
-    % sfft = temp;
+    [sorted,I] = sort(abs(sfft),'descend');
+    % I = (abs(sfft)~=0);
+    temp = zeros(1,length(sfft));
+    % temp(I) = ABS11(I);
+    % temp(I(1:k)) = ABS11(I(1:k));
+    temp(I(1:k)) = sfft(I(1:k));
+    sfft = temp;
     
-    % [sorted,I] = sort(abs(sfft_real),'descend');
-    % % I = (abs(sfft_real)~=0);
-    % temp = zeros(1,length(sfft_real));
-    % % temp(I) = R11(I);
-    % % temp(I(1:k)) = R11(I(1:k));
-    % temp(I(1:k)) = sfft_real(I(1:k));
-    % sfft_real = temp;
+    [sorted,I] = sort(abs(sfft_real),'descend');
+    % I = (abs(sfft_real)~=0);
+    temp = zeros(1,length(sfft_real));
+    % temp(I) = R11(I);
+    % temp(I(1:k)) = R11(I(1:k));
+    temp(I(1:k)) = sfft_real(I(1:k));
+    sfft_real = temp;
 
-    % [sorted,I] = sort(abs(sfft_imag),'descend');
-    % % I = (abs(sfft_imag)~=0);
-    % temp = zeros(1,length(sfft_imag));
-    % % temp(I) = I11(I);
-    % % temp(I(1:k)) = I11(I(1:k));
-    % temp(I(1:k)) = sfft_imag(I(1:k));
-    % sfft_imag = temp;
+    [sorted,I] = sort(abs(sfft_imag),'descend');
+    % I = (abs(sfft_imag)~=0);
+    temp = zeros(1,length(sfft_imag));
+    % temp(I) = I11(I);
+    % temp(I(1:k)) = I11(I(1:k));
+    temp(I(1:k)) = sfft_imag(I(1:k));
+    sfft_imag = temp;
 
-    dB_cmplx = 20*log10(abs(sfft));  
-    dB_real = 20*log10(abs(sfft_real));
-    dB_imag = 20*log10(abs(sfft_imag));
-    % dB_cmplx = abs(sfft);  
-    % dB_real = abs(sfft_real);
-    % dB_imag = abs(sfft_imag);
+    % dB_cmplx = 20*log10(abs(sfft));  
+    % dB_real = 20*log10(abs(sfft_real));
+    % dB_imag = 20*log10(abs(sfft_imag));
+    dB_cmplx = abs(sfft);  
+    dB_real = abs(sfft_real);
+    dB_imag = abs(sfft_imag);
 
-    dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
-    dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    % dBFS_real_s = dB_real - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    % dBFS_imag_s = dB_imag - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    % dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
 
-    % dBFS_real_s = dB_real;
-    % dBFS_imag_s = dB_imag;
-    % dBFS_cmplx_s = dB_cmplx;
+    dBFS_real_s = dB_real;
+    dBFS_imag_s = dB_imag;
+    dBFS_cmplx_s = dB_cmplx;
 
     subplot(2,2,1)
     hold all;
@@ -383,7 +379,7 @@ function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
   
   w = (1 / pi) * (1/lobefrac) * acosh(1./tolerance);
   % disp(w);
-  w=175;
+  w=255;
   if ~mod(w,2) 
    w = w+1;
  end
@@ -398,7 +394,7 @@ function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
   end
 
   x = fft(x);
- fftshift(x);
+  %  x = fftshift(x);
 
  x= real(x);
 end
@@ -438,6 +434,7 @@ function [x,w,h] = make_multiple_t(x,w,n,b)
 
   offsetc = 1;
   const_gain=exp((-2*pi * 1i * double(w/2)) / double(n));
+  % const_gain=1;
   
   for ii = 0:n-1
     h(ii+1) = h(ii+1)*offsetc;

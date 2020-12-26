@@ -101,7 +101,7 @@ function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filt
 end
 
 function [score, hits, hits_found] = inner_loop_filter_regular(J,n,num,B,a,ai,b,loop_threshold,score, hits, hits_found)
-  for ii=0:num-1
+  for ii=0:length(J)-1
     low = mod((int32(ceil((J(ii+1) - 0.5) * n / B)) + n),n);
     high = mod((int32(ceil((J(ii+1) + 0.5) * n / B)) + n),n);
     loc = timesmod(low, a, n);
@@ -170,11 +170,8 @@ function oloop_output = estimate_values(hits,hits_found,x_samp, loops,n, permute
 
     location = round((loops + 1) / 2);
 
-    values(1,:) = median(values(1,:));
-    values(2,:) = median(values(2,:));
-    
-    realv = values(1,location);
-    imagv = values(2,location);
+    realv = median(values(1,:));
+    imagv = median(values(2,:));
 
     oloop_output(hits(ii+1)+1) = realv + 1i*imagv;
     
@@ -238,10 +235,7 @@ function x = mod_inverse(a, m)
 		x = x + m0 ;
   end
   % x = mod(x,m0);
-%   disp("x");
-%   disp(x);
-%   disp("mod(a0*x,m)");
-%   disp(mod(a0*x,m0));
+
 end
 
 function output = find_largest_indices(num,samples)
@@ -252,13 +246,13 @@ function output = find_largest_indices(num,samples)
   % disp("sum(log(samples)>3)");
   % disp(sum(log(samples)>3));
 
-  % temp = sum(log10(samples)>2);
+  temp = sum(abs(samples)>2000);
 
   % if num > temp
   %   num = temp;
   % end
 
-    if num > length(samples)
+  if num > length(samples)
     num = length(samples);
   end
   
