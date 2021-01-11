@@ -1,15 +1,99 @@
 function [] = experiment()
+% x_f - True FFT
+clc;
+clear all;
+close all;
+%% global variables
+% Based on sensor configuration.
+   numADCBits = 16; % number of ADC bits per sample.
+   numADCSamples = 256; % number of ADC samples per chirp.
+   numRx = 4; % number of receivers in AWR1243.
+   chirpSize = numADCSamples*numRx;
+   chirploops= 128; % No. of of chirp loops.  
+   numLanes = 4; % do not change. number of lanes is always 4
+   isReal = 0; % set to 1 if real only data, 0 if complex data.
+   numFrames = 200; 
+   numChirps = 1;% To consider all the chriploops keep numchrirps = chirploops.
+   sampleRate = 10; % [Msps]
+   timeStep = 1/sampleRate;    % [us]
+   chirpPeriod = numADCSamples * timeStep ; % [us]
+   plotEnd = numADCSamples *  numChirps *numFrames; %for considering all frames.
+   Dx = numADCSamples * numChirps ;
+   timeEnd = (plotEnd-1) * timeStep;
+
+%% read file
+% read .bin file
+fid = fopen('../adc_data_Raw.bin','r');
+adcData = fread(fid, 'int16');
+fclose(fid);
+% adcData = adcData1(1:length(adcData1)/numFrames);
+fileSize = size(adcData, 1);
+% one chirp only (next line iin case of multiple chirps)
+% adcData = adcData(1:chirpSize,1);
+% organize data by LVDS lane
+% for complex data
+  remaind = mod(fileSize,8);
+% Make data(Interleaved Data from AWR1243) over 8 columns. 
+
+if remaind ~= 0
+   adcData =[ adcData;zeros(8-remaind,1)] ;
+end
+   fileSize = length(adcData);
+%% stroing data in LVDS if Real and in cmplx if complex(IQ from mmwave studio)   
+if isReal % For real data 4 columns for 4 receivers
+    adcData = adcData';
+    LVDS = reshape(adcData ,4,[])';
+
+else
+% cmplx has 4 real & 4 imaginary columns for 4 Rceivers for interleaved data format.
+    adcData = adcData';
+    cmplx = reshape(adcData ,8,[])';
+end
+
+%% return receiver data
+if isReal 
+    retValue = LVDS;
+else
+    retValue = cmplx;
+end
+
+%% plotting the data
+adcData = retValue ;
+
+sample = (0:1:plotEnd-1);
+time = (0:timeStep:timeEnd);
+f = (0:1:plotEnd-1);
+f_bin = (0:1:length(adcData)-1);
+
+% % Distance calculation using d=(c*f/(2*slope))
+fdel_bin = (-128:1:127)*((10^7)/256);
+distance = ((1.5*10^8)*fdel_bin)/(29.982*10^12);
+
+
+% % plotting for all frames (Channel 1)
+ 
+ real_1 = adcData(:,1);        
+ imag_1 = adcData(:,5);
+ 
+
+%  figure(1);
+%  hold on;
+
+ WITH_COMB  = false;
+ ALGORITHM1 = true;
+ VERBOSE    = false;
+ % TIMING     = false;
  
  n = 256;
- k = 17;
+ k = 1;
  repetitions = 1;
  Bcst_loc = 32;
  Bcst_est = 32;
  Comb_cst = 16;
  loc_loops = 0;
- est_loops = 6;
+ est_loops = 3;
 %  threshold_loops = round((loc_loops+est_loops)/2);
- threshold_loops = 3;
+ threshold_loops = 1;
  Comb_loops = 1;
  simulate = 0;
  snr = 1000000000;
@@ -23,7 +107,7 @@ function [] = experiment()
   BB_est =  uint8(Bcst_est*sqrt(n*k/(log2(n))));
 
   lobefrac_loc = 0.5 / (BB_loc);
-  lobefrac_est = 0.2 / (BB_est);
+  lobefrac_est = 0.5 / (BB_est);
 
   b_loc = int32(1.2*1.1*( n/BB_loc));
   b_est = int32(1.4*1.1*( n/BB_est));
@@ -39,24 +123,241 @@ function [] = experiment()
   fprintf("  k : %d \n ",k);
   fprintf("  loc_loops : %d \n ",loc_loops);
   fprintf("  est_loops : %d \n ",est_loops);
+  fprintf("  est_loops : %d \n ",est_loops);
   fprintf("  threshold_loops : %d \n ",threshold_loops);
   fprintf("  B_loc : %d \n ",B_loc);
   fprintf("  B_thresh : %d \n ",B_thresh);
   fprintf("  B_est : %d \n ",B_est);
 
-  x  = rand(1,n);
+  % disp(B_loc);
+  % disp(B_thresh);
+  % disp(B_est);
+
+  runtime_fft = 0;
+  runtime_sfft = 0;
+
+  chirp_count = 0;
+  abs_acc = 0;
+  abs_acc_arr = [];
+  abs_acc_phase_arr = [];
+n = 256;
+  tic;
+
+%%%%%%%%% CALCULATING AND PLOTTING THE TRANSFORMS %%%%%%%%%  
+%  for  idx=1:Dx:plotEnd 
+% for est_loops = 3:3
+
+  chirp_count = 0;
+  abs_acc = 0;
+  abs_phase_acc = 0;
+for  idx=1:Dx:plotEnd/3
+  % for  idx=1:Dx:Dx  
+    % for  idx=Dx+1:Dx:2*Dx  
+
+    chirp_count = chirp_count + 1;
+
+    % w = waitforbuttonpress;
+
+    clf;
+    R1=real_1(idx : idx+Dx-1);
+    I1 = imag_1(idx : idx+Dx-1);
+    x = R1 + 1i*I1;
+    
+    time_temp = toc;
+    ABS11 = fftshift(fft_recur(hanning(length(R1+1i*I1)).*(R1+1i*I1)));
+    runtime_fft = toc - time_temp;
+   
+    % dB_cmplx = 20*log10(abs(ABS11));  
+    
+    dB_cmplx = abs(ABS11);  
+    
+    % dB_cmplx = angle(ABS11);  
+
+    % dBFS_cmplx = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+    dBFS_cmplx = dB_cmplx;
+
 
     % disp("SFFT REAL BEING CALCULATED");
+    time_temp = toc;
     sfft = fftshift(run_experiment(x',256,lobefrac_loc, tolerance_loc, b_loc,B_loc, B_thresh, loc_loops, threshold_loops,lobefrac_est, tolerance_est, b_est,B_est, est_loops, W_Comb, Comb_loops,repetitions, FFTW_OPT, LARGE_FREQ, k));
 
-    [sorted,I] = sort(abs(sfft),'descend');
-    % I = (abs(sfft)~=0);
+
+    disp("ABS VALUES");
+    [M,I] = max(abs(sfft));
     temp = zeros(1,length(sfft));
-    % temp(I) = ABS11(I);
-    % temp(I(1:k)) = ABS11(I(1:k));
-    temp(I(1:k)) = sfft(I(1:k));
+    temp(I) = sfft(I);
+    A = I;
+    % A_phase = angle(temp(I));
+    [M,I] = max(abs(ABS11));
+    B = I;
+    factor_dista =((10^7)/256)*((1.5*10^8)/(29.982*10^12));
+
+    fprintf("A = %d   B = %d\n",A,B);
+    fprintf("A = %d   B = %d (in metres)\n",(A-128)*factor_dista,(B-128)*factor_dista);
+    fprintf("f(A) = %d   f(B) = %d\n",abs(sfft(A)),abs(ABS11(B)));
+
+    % B_phase = angle(ABS11(I));
+    
+    % abs_acc = abs_acc + get_freq_mse(A,B);
+    % abs_phase_acc = abs_phase_acc + get_phase_mse(A,A_phase,B,B_phase);
     sfft = temp;
     
+    runtime_sfft = toc - time_temp;
+    
+    % dB_cmplx = 20*log10(abs(sfft));  
+    
+    dB_cmplx = abs(sfft);  
+    
+    % % PHASE OF THE SIGNAL
+    % dB_cmplx = angle(sfft);  
+    
+    % dBFS_cmplx_s = dB_cmplx - 20*log10(256)-20*log10(2^15)+20*log10(2^(0.5))-2.0;
+
+    dBFS_cmplx_s = dB_cmplx;
+
+    grid on ;
+    hold all;
+    stem(distance,dBFS_cmplx_s,'linewidth',1);
+    % axis([-25 25 -140 0]);
+    title('SFFT Amplitude(per chirp)','FontSize',20);
+    xlabel('Distance[m]','FontSize',18);
+    ylabel('FFT output','FontSize',18);
+    set(gca,'FontSize',18,'FontWeight','bold');
+
+    % figure;
+
+    grid on ;
+    hold all;
+    plot(distance,dBFS_cmplx,'r','linewidth',1);
+    %  axis([-25 25 -140 0]);
+    title('1D FFT Amplitude profile(per chirp)','FontSize',20);
+    xlabel('Distance[m]','FontSize',18);
+    ylabel('FFT output','FontSize',18);
+    set(gca,'FontSize',18,'FontWeight','bold');
+    legend('SFFT','Normal FFT','FontSize',7)
+    drawnow;
+    % figure;
+
+    % grid on ;
+    % hold all;
+    % stem(distance,angle(sfft),'linewidth',1);
+    % % axis([-25 25 -140 0]);
+    % title('SFFT Amplitude(per chirp)','FontSize',20);
+    % xlabel('Distance[m]','FontSize',18);
+    % ylabel('FFT output','FontSize',18);
+    % set(gca,'FontSize',18,'FontWeight','bold');
+
+    % % figure;
+
+    % grid on ;
+    % hold all;
+    % plot(distance,angle(ABS11),'r','linewidth',1);
+    % %  axis([-25 25 -140 0]);
+    % title('1D FFT Amplitude profile(per chirp)','FontSize',20);
+    % xlabel('Distance[m]','FontSize',18);
+    % ylabel('FFT output','FontSize',18);
+    % set(gca,'FontSize',18,'FontWeight','bold');
+    % legend('SFFT','Normal FFT','FontSize',7)
+    % drawnow;
+
+    % figure;
+
+% pause(2);
+  end
+
+  % abs_acc_arr(est_loops-1) =  sqrt(abs_acc/chirp_count);
+  % abs_acc_phase_arr(est_loops-1) = sqrt(abs_phase_acc/chirp_count);
+
+  % fprintf("RMSE of ABS location/frequency %d \n", sqrt(abs_acc/chirp_count));
+  % fprintf("RMSE of ABS phases (in radians) %d \n", sqrt(abs_acc/chirp_count));
+  % fprintf("RMSE of ABS phases (in degrees) %d \n", sqrt(abs_acc/chirp_count)*(180/3.14));  
+
+% end
+  % figure;
+  % plot(1:length(abs_acc_arr),abs_acc_arr);
+  % title("Frequency RMSE (Imag)");
+  % xlabel("No. of outer loops");
+  % ylabel("RMSE");
+  % figure;
+  % plot(1:length(abs_acc_phase_arr),abs_acc_phase_arr);
+  % title("Phase RMSE (Imag)");
+  % xlabel("No. of outer loops");
+  % ylabel("RMSE (Radians)");
+  
+  % fprintf("Average accuracy of ABS values %d \n", (abs_acc/chirp_count)*100);
+
+  % fprintf(" Runtime of FFT is %d \n ",runtime_fft);
+  % fprintf(" Runtime of SFFT is %d \n \n",runtime_sfft);
+end
+
+function acc = get_freq_mse(A,B)
+  num1 = length(A);
+  num2 = length(B);
+  acc = 0;
+  for ii = 1:num1
+    for jj = 1:num2
+      if A(ii) == B(jj)
+        % acc = acc + 1;
+        A(ii) = 0;
+        B(jj) = 0;
+        break; 
+      end
+    end
+  end
+ 
+  A = sort(A);
+  B = sort(B);
+  % disp("A");
+  % disp(A);
+  % disp("B");
+  % disp(B);
+  acc = mean((A'-B).^2);
+  % disp(acc);
+  % acc = acc/num1;
+  % if acc == 0
+  % disp("Accuracy Zero");
+  % disp(A);
+  % disp(B);
+  % end
+end
+
+function acc = get_phase_mse(A,A_phase,B,B_phase)
+  num1 = length(A);
+  num2 = length(B);
+  acc = 0;
+  
+  for ii = 1:num1
+    for jj = 1:num2
+      if A(ii) == B(jj)
+        % acc = acc + 1;
+        A(ii) = 0;
+        B(jj) = 0;
+        acc = acc + (A_phase(ii)-B_phase(jj))^2;
+        break; 
+      end
+    end
+  end
+ 
+  [A,I] = sort(A);
+  B = sort(B);
+
+  for ii = 1:num1
+    if A(ii) ~= 0
+      acc = acc + (A_phase(I(ii))-B_phase(I(ii)))^2;
+    end
+  end
+  % disp("A");
+  % disp(A);
+  % disp("B");
+  % disp(B);
+  % acc = mean((A'-B).^2);
+  % disp(acc);
+  acc = acc/num1;
+  % if acc == 0
+  % disp("Accuracy Zero");
+  % disp(A);
+  % disp(B);
+  % end
 end
 
 %%%%%%%%% CALCULATING FILTER VALUES AND RUN OUTER LOOP  %%%%%%%%%  
@@ -87,9 +388,11 @@ end
 function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
   % disp("CALCULATING DOLPHCHEBYSHEV FILTER");  
   
-  w = (1 / pi) * (1/lobefrac) * acosh(1./tolerance);
-  % disp(w);
-  w=255;
+  w = double(((1 / pi) * (1/lobefrac) * acosh(1./tolerance)));
+  % w=255;
+  disp("w");
+  disp(w);
+  disp(class(w));
   if ~mod(w,2) 
    w = w+1;
  end
@@ -98,7 +401,7 @@ function [x,w] = make_dolphchebyshev_t(lobefrac,tolerance)
 
   t0 = cosh(double(acosh(1/tolerance) / (w-1)));
 
-
+ 
  for ii=0:w-1
     x(ii+1) = Cheb(w-1, t0 * cos(double((pi * ii) / w))) * tolerance;
   end
@@ -143,8 +446,8 @@ function [x,w,h] = make_multiple_t(x,w,n,b)
   h = h/maximum;
 
   offsetc = 1;
-  const_gain=exp((-2*pi * 1i * double(w/2)) / double(n));
-  % const_gain=1;
+  % const_gain=exp((-2*pi * 1i * double(w/2)) / double(n));
+  const_gain=1;
   
   for ii = 0:n-1
     h(ii+1) = h(ii+1)*offsetc;

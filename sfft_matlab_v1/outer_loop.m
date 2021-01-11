@@ -2,7 +2,8 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
   % disp("STARTING OUTER LOOP");
   permute_vals = zeros(1,loops);
   permuteb_vals = zeros(1,loops);
-
+  disp(B);
+  disp(B2);
   x_samp = {};
   for ii = 0:loops
     if ii<location_loops
@@ -60,6 +61,12 @@ function oloop_output = outer_loop(origx,n, filter_timedo,filter_sizet,filter_fr
       
     % end
   end
+  
+  % disp("unique indices");
+  % disp(sum~=0));
+  % disp("");
+
+  
   % disp("loop threshold")
   % disp(loop_threshold);
   % disp("hits");
@@ -80,13 +87,19 @@ function [x_samp,J] = inner_loop_locate(origx,n, filter_timedo,filter_sizet,filt
   x_sampt = zeros(1,B);
   % disp(filter_sizet);
   index=b;
+  temp = zeros(1,filter_sizet);
+  % fprintf("Inner loop locate\n");
   for ii = 0:filter_sizet-1
+    % fprintf("index %d origx value %d\n",index,origx(index+1));
     x_sampt(mod(ii,B)+1) = x_sampt(mod(ii,B)+1) + origx(index+1)*filter_timedo(ii+1);
     index = mod((index+ai),n);
   end
+  % disp(temp);
+  % fprintf("\n");
 
   % disp("INNER LOOP LOCATE FFT_RECUR");
   x_samp = fft_recur(x_sampt);
+  % disp(x_samp);
   % disp(size(x_samp));
   % disp(B);
   samples = abs(x_samp(1:B));
@@ -246,7 +259,7 @@ function output = find_largest_indices(num,samples)
   % disp("sum(log(samples)>3)");
   % disp(sum(log(samples)>3));
 
-  temp = sum(abs(samples)>2000);
+  % temp = sum(abs(samples)>2000);
 
   % if num > temp
   %   num = temp;
